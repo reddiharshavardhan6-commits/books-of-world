@@ -1,0 +1,3329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Books of Worlds</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Cormorant+Garamond:ital,wght@1,400;1,500;1,600&display=swap');
+:root{
+  --bg:#06040a;--bg2:#0d0913;--bg3:#181226;
+  --gold:#c9a857;--gold2:#f3dc8a;--gold3:#7a6020;--goldline:#8a7030;
+  --silver:#9ab0c8;--silver2:#d0dce8;
+  --cream:#f0ead8;--parch:#ddd0b0;--leather:#3a2418;
+  --ink:#100d08;--muted:#786050;
+  --green:#2a6a2a;--blue:#1a3a7a;--red:#7a1a1a;--purple:#4a1a7a;
+  --r:2px;
+  --spring:#5ab83a;--summer:#d4a030;--autumn:#b85a20;--winter:#8ab0d8;--night:#0a1428;--storm:#303848;--dusk:#d06040;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);}
+body{font-family:'Crimson Pro',serif;cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20'%3E%3Ccircle cx='10' cy='10' r='4' fill='%23c8a84a' opacity='.8'/%3E%3C/svg%3E") 10 10, crosshair;}
+
+/* ── GRAIN OVERLAY ── */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+  opacity:.35;}
+
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;transition:opacity .6s ease,transform .6s ease;}
+.screen.off{opacity:0;pointer-events:none;transform:scale(.97) translateY(8px);}
+
+/* ══════════════════════ GOLD-THREAD BUTTON SYSTEM ══════════════════════ */
+/* Signature element: an animated conic-gradient "stitched gilt thread"
+   that travels the border of primary actions, like thread tracing
+   the binding-edge of a leather-bound tome. */
+@property --threadAngle{syntax:'<angle>';inherits:false;initial-value:0deg;}
+.gthread{position:relative;isolation:isolate;}
+.gthread::before{
+  content:'';position:absolute;inset:-1px;border-radius:inherit;z-index:-1;
+  background:conic-gradient(from var(--threadAngle),
+    transparent 0deg, var(--gold2) 8deg, transparent 20deg,
+    transparent 160deg, var(--gold2) 168deg, transparent 180deg,
+    transparent 340deg, var(--gold2) 348deg, transparent 360deg);
+  opacity:0;transition:opacity .4s ease;
+  animation:threadspin 3.2s linear infinite;
+  animation-play-state:paused;
+}
+.gthread:hover::before,.gthread:focus-visible::before{opacity:1;animation-play-state:running;}
+@keyframes threadspin{from{--threadAngle:0deg;}to{--threadAngle:360deg;}}
+.gthread::after{content:'';position:absolute;inset:0;border-radius:inherit;background:inherit;z-index:-1;}
+
+/* ══════════════════════ SHARED TRANSITION / FX LAYERS ══════════════════════
+   #orbFlash and #pfx are persistent overlays (siblings of .screen, not
+   nested inside any single screen) so they render correctly no matter which
+   screen is active. They previously lived inside a legacy title screen that
+   was never shown, which silently broke the level-transition flash and every
+   particle effect (rain/moonbeam/firepath mechanics, win confetti). Fixed. */
+#orbFlash{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:50;}
+
+/* ══════════════════════ SHARED UI MICRO-INTERACTIONS ══════════════════════ */
+.portal-ring{
+  position:fixed;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;
+  border:2px solid rgba(200,168,74,.9);pointer-events:none;z-index:49;
+  animation:portalRing .7s cubic-bezier(.16,1,.3,1) forwards;
+}
+@keyframes portalRing{
+  0%{width:12px;height:12px;margin:-6px 0 0 -6px;opacity:1;border-width:3px;}
+  100%{width:900px;height:900px;margin:-450px 0 0 -450px;opacity:0;border-width:0;}
+}
+.ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.5);
+  transform:scale(0);animation:rippleOut .6s ease-out forwards;pointer-events:none;}
+@keyframes rippleOut{to{transform:scale(2.6);opacity:0;}}
+.t-btn,.lcard,.ls-tab,.wbtn,.hbtn{position:relative;overflow:hidden;}
+.t-btn:active,.wbtn:active,.hbtn:active{transform:scale(.96);transition:transform .12s cubic-bezier(.34,1.56,.64,1);}
+.lcard:active{transform:scale(.97);}
+
+/* ══════════════════════ LEVEL SELECT ══════════════════════ */
+#sLevels{background:radial-gradient(ellipse 80% 70% at 50% 50%,#120e1e 0%,var(--bg) 100%);}
+.ls-scroll{width:min(960px,96vw);max-height:90vh;overflow-y:auto;padding:0 .5rem;}
+.ls-scroll::-webkit-scrollbar{width:4px;}
+.ls-scroll::-webkit-scrollbar-thumb{background:rgba(200,168,74,.3);border-radius:2px;}
+.ls-header{text-align:center;padding:1.8rem 0 1.2rem;}
+.ls-h1{font-family:'Cinzel',serif;font-size:2rem;font-weight:900;color:var(--cream);letter-spacing:.05em;}
+.ls-h1 span{color:var(--gold);}
+.ls-sub{font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-top:.4rem;opacity:.8;}
+.ls-tabs{display:flex;justify-content:center;gap:.5rem;margin:0 0 1.2rem;flex-wrap:wrap;}
+.ls-tab{background:rgba(255,255,255,.03);border:1px solid rgba(200,168,74,.18);color:var(--muted);padding:.45rem 1rem;border-radius:20px;cursor:pointer;font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;transition:all .2s;}
+.ls-tab:hover{border-color:var(--gold);color:var(--gold2);}
+.ls-tab.on{background:rgba(80,55,15,.5);border-color:var(--gold);color:var(--gold2);}
+.ls-divider{display:flex;align-items:center;gap:1rem;margin:1rem 0 .8rem;}
+.ls-divider::before,.ls-divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(200,168,74,.3),transparent);}
+.ls-divider span{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.15em;color:var(--gold);text-transform:uppercase;}
+.ls-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:.7rem;margin-bottom:1.5rem;}
+.lcard{
+  background:linear-gradient(160deg,rgba(255,255,255,.04) 0%,rgba(255,255,255,.015) 100%);
+  border:1px solid rgba(200,168,74,.15);border-radius:var(--r);padding:1rem .9rem;
+  cursor:pointer;transition:all .25s;position:relative;overflow:hidden;
+}
+.lcard::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent 55%,rgba(200,168,74,.06));pointer-events:none;}
+.lcard:hover{border-color:rgba(200,168,74,.5);transform:translateY(-3px);box-shadow:0 12px 32px rgba(0,0,0,.5),0 0 0 1px rgba(200,168,74,.15);}
+.lcard.completed{border-color:rgba(90,180,60,.3);}
+.lcard.locked{opacity:.3;cursor:not-allowed;filter:grayscale(.8);}
+.lcard-n{font-family:'Cinzel',serif;font-size:1.6rem;font-weight:900;color:rgba(200,168,74,.25);line-height:1;margin-bottom:.3rem;}
+.lcard-chapter{font-size:.55rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:.2rem;}
+.lcard-name{font-weight:600;font-size:.82rem;color:var(--cream);margin-bottom:.4rem;line-height:1.3;}
+.lcard-creatures{font-size:.95rem;letter-spacing:.05em;}
+.lcard-diff{position:absolute;top:.6rem;right:.6rem;font-size:.5rem;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:10px;font-family:'Cinzel',serif;}
+.d-easy{background:rgba(60,150,60,.2);color:#7dc862;}
+.d-medium{background:rgba(200,148,58,.2);color:#d4943a;}
+.d-hard{background:rgba(180,60,60,.2);color:#e07070;}
+.d-extreme{background:rgba(120,60,180,.2);color:#c090e0;}
+.d-legendary{background:rgba(200,80,40,.22);color:#f0a060;}
+.ls-back{display:block;margin:0 auto 1.5rem;background:transparent;border:1px solid rgba(200,168,74,.2);color:var(--muted);padding:.5rem 1.4rem;border-radius:var(--r);cursor:pointer;font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;transition:all .2s;}
+.ls-back:hover{color:var(--gold);border-color:var(--gold);}
+
+/* ══════════════════════ GAME ══════════════════════ */
+#sGame{background:var(--bg);}
+#gc{position:absolute;inset:0;display:block;width:100%!important;height:100%!important;}
+
+/* HUD */
+#hud{position:absolute;inset:0;pointer-events:none;display:grid;grid-template-rows:auto 1fr auto;padding:.7rem .9rem;}
+.hud-top{display:flex;justify-content:space-between;align-items:flex-start;gap:.8rem;}
+.hud-left{}
+.hud-name{font-family:'Cinzel',serif;font-size:1rem;font-weight:600;color:rgba(240,234,216,.92);letter-spacing:.05em;}
+.hud-chapter{font-size:.55rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:.3rem;}
+.hud-hint{font-size:.68rem;color:rgba(240,234,216,.4);max-width:260px;line-height:1.5;margin-top:.2rem;font-style:italic;}
+.hud-right{display:flex;flex-direction:column;align-items:flex-end;gap:.4rem;}
+.hud-btns{display:flex;gap:.35rem;}
+.hbtn{pointer-events:all;background:rgba(14,12,8,.85);border:1px solid rgba(200,168,74,.2);color:rgba(240,234,216,.6);padding:.3rem .7rem;border-radius:var(--r);cursor:pointer;font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;transition:all .2s;}
+.hbtn:hover{border-color:var(--gold);color:var(--gold);}
+.hbtn.hint{border-color:rgba(120,170,255,.3);color:rgba(170,200,245,.75);}
+.hbtn.hint:hover{border-color:#7aa8ff;color:#bcd4ff;}
+
+/* creatures */
+.crlist{display:flex;gap:.3rem;flex-wrap:wrap;margin-top:.4rem;max-width:320px;}
+.crbadge{display:flex;align-items:center;gap:.28rem;background:rgba(14,12,8,.8);border:1px solid rgba(200,168,74,.18);border-radius:2px;padding:.24rem .5rem;font-size:.66rem;color:rgba(240,234,216,.7);transition:all .3s;font-family:'Crimson Pro',serif;}
+.crbadge.home{border-color:rgba(80,190,60,.6);background:rgba(30,70,20,.55);color:#9de878;}
+
+/* controls */
+.ctrl-panel{display:flex;flex-direction:column;gap:.4rem;align-items:flex-end;}
+.ctrl-row{display:flex;gap:.3rem;flex-wrap:wrap;justify-content:flex-end;max-width:420px;}
+.cbtn{pointer-events:all;background:rgba(14,12,8,.85);border:1px solid rgba(200,168,74,.18);border-radius:var(--r);padding:.28rem .65rem;font-family:'Cinzel',serif;font-size:.58rem;letter-spacing:.07em;text-transform:uppercase;color:rgba(240,234,216,.6);cursor:pointer;transition:all .2s;}
+.cbtn:hover{border-color:rgba(200,168,74,.45);color:var(--gold2);}
+.cbtn.on{background:rgba(80,55,15,.5);border-color:var(--gold);color:var(--gold2);}
+.cbtn.locked{opacity:.28;cursor:not-allowed;}
+.cbtn.mech{border-color:rgba(80,130,220,.2);color:rgba(170,200,245,.6);}
+.cbtn.mech.on{background:rgba(20,50,100,.45);border-color:#5a90d8;color:#a8c8f5;}
+.cbtn.mech:hover{border-color:rgba(90,144,216,.5);}
+.cbtn.cooldown{opacity:.4;cursor:not-allowed;position:relative;overflow:hidden;}
+.cbtn.cooldown::after{content:attr(data-cd);position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);font-size:.55rem;color:#ffb380;}
+
+/* season bar */
+.sbar{pointer-events:all;display:flex;justify-content:center;gap:.4rem;padding-bottom:.3rem;flex-wrap:wrap;}
+.sbtn{background:rgba(14,12,8,.9);border:1px solid rgba(200,168,74,.18);border-radius:var(--r);padding:.42rem .85rem;font-family:'Cinzel',serif;font-size:.68rem;cursor:pointer;transition:all .2s;color:rgba(240,234,216,.65);display:flex;align-items:center;gap:.3rem;letter-spacing:.05em;pointer-events:all;}
+.sbtn:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(0,0,0,.4);border-color:rgba(200,168,74,.35);}
+.sbtn.on{border-color:var(--gold);color:var(--gold2);background:rgba(70,48,12,.5);}
+
+/* move counter */
+#movect{position:absolute;top:.75rem;left:50%;transform:translateX(-50%);background:rgba(14,12,8,.88);border:1px solid rgba(200,168,74,.2);border-radius:20px;padding:.28rem .9rem;font-family:'Cinzel',serif;font-size:.65rem;color:var(--gold);letter-spacing:.1em;pointer-events:none;white-space:nowrap;}
+#movect.over{color:#e87a5a;border-color:rgba(232,122,90,.4);}
+
+/* chain feed */
+#feed{position:absolute;right:.9rem;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:.32rem;pointer-events:none;width:200px;}
+.fitem{background:rgba(14,12,8,.95);border-left:2px solid var(--gold);border-radius:0 2px 2px 0;padding:.35rem .6rem;font-size:.66rem;color:rgba(240,234,216,.88);font-family:'Crimson Pro',serif;animation:fin .3s ease;line-height:1.4;}
+.fitem.fade{opacity:0;transition:opacity .5s;}
+@keyframes fin{from{opacity:0;transform:translateX(14px);}to{opacity:1;transform:none;}}
+
+/* toast */
+#toast{position:absolute;bottom:5.2rem;left:50%;transform:translateX(-50%);background:rgba(14,12,8,.97);border:1px solid rgba(200,168,74,.35);border-radius:var(--r);padding:.52rem 1.2rem;font-size:.72rem;color:rgba(240,234,216,.92);font-family:'Crimson Pro',serif;pointer-events:none;transition:opacity .35s;white-space:nowrap;z-index:10;}
+#toast.off{opacity:0;}
+
+/* objective panel */
+#objpanel{position:absolute;left:.9rem;top:50%;transform:translateY(-50%);background:rgba(14,12,8,.88);border:1px solid rgba(200,168,74,.15);border-radius:var(--r);padding:.7rem .8rem;min-width:150px;pointer-events:none;}
+.obj-title{font-family:'Cinzel',serif;font-size:.55rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem;}
+.obj-item{font-size:.66rem;color:rgba(240,234,216,.6);font-family:'Crimson Pro',serif;margin-bottom:.25rem;display:flex;align-items:center;gap:.35rem;}
+.obj-item.done{color:rgba(80,190,60,.8);}
+.obj-dot{width:5px;height:5px;border-radius:50%;background:rgba(200,168,74,.4);flex-shrink:0;}
+.obj-item.done .obj-dot{background:#5ab83a;}
+
+/* ══════════════════════ OPENING ACT — RIDDLE OVERLAY ══════════════════════ */
+#riddle{position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 45%,rgba(20,14,10,.92) 0%,rgba(6,4,10,.97) 100%);
+  display:flex;align-items:center;justify-content:center;z-index:40;
+  opacity:0;pointer-events:none;transition:opacity .9s ease;}
+#riddle.show{opacity:1;pointer-events:all;}
+.riddle-page{
+  max-width:560px;width:88vw;text-align:center;padding:2.6rem 2.4rem;position:relative;
+  background:linear-gradient(160deg,rgba(237,226,196,.06) 0%,rgba(237,226,196,.02) 100%);
+  border:1px solid rgba(200,168,74,.25);border-radius:3px;
+  box-shadow:0 0 80px rgba(200,168,74,.06),inset 0 0 60px rgba(0,0,0,.3);
+  animation:riddleIn 1.1s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes riddleIn{from{opacity:0;transform:translateY(18px) scale(.98);}to{opacity:1;transform:none;}}
+.riddle-chapter{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.25em;text-transform:uppercase;color:var(--gold);margin-bottom:.9rem;}
+.riddle-cap{font-family:'Cinzel',serif;font-size:3.2rem;color:var(--gold2);float:left;line-height:.8;margin:.1rem .5rem 0 0;text-shadow:0 0 30px rgba(243,220,138,.4);}
+.riddle-text{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.22rem;line-height:1.65;color:rgba(240,234,216,.92);text-align:left;min-height:4.5rem;}
+.riddle-text .cursor{display:inline-block;width:2px;height:1.1em;background:var(--gold2);vertical-align:-2px;animation:blink 1s step-end infinite;}
+@keyframes blink{50%{opacity:0;}}
+.riddle-schematic{margin-top:1.4rem;padding-top:1.1rem;border-top:1px solid rgba(200,168,74,.18);font-family:'Crimson Pro',serif;font-size:.78rem;color:rgba(200,168,74,.85);line-height:1.8;text-align:left;clear:both;}
+.riddle-schematic b{color:var(--gold2);font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:.4rem;}
+.riddle-go{margin-top:1.6rem;clear:both;}
+.riddle-skip{display:inline-block;margin-top:1.6rem;background:transparent;color:var(--muted);border:1px solid rgba(200,168,74,.2);padding:.5rem 1.3rem;border-radius:20px;cursor:pointer;font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;transition:all .2s;}
+.riddle-skip:hover{color:var(--gold2);border-color:var(--gold);}
+.riddle-corner{position:absolute;width:22px;height:22px;border:1px solid rgba(200,168,74,.35);}
+.riddle-corner.tl{top:10px;left:10px;border-right:none;border-bottom:none;}
+.riddle-corner.tr{top:10px;right:10px;border-left:none;border-bottom:none;}
+.riddle-corner.bl{bottom:10px;left:10px;border-right:none;border-top:none;}
+.riddle-corner.br{bottom:10px;right:10px;border-left:none;border-top:none;}
+
+/* WIN */
+#win{position:absolute;inset:0;background:rgba(6,4,10,.9);display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .7s;}
+#win.show{opacity:1;pointer-events:all;}
+.win-page{
+  background:linear-gradient(160deg,var(--cream) 0%,var(--parch) 100%);
+  padding:2.8rem 3.2rem;border-radius:2px 8px 8px 2px;text-align:center;
+  box-shadow:-8px 0 0 var(--gold3),0 50px 120px rgba(0,0,0,.9);
+  animation:pageOpen .8s cubic-bezier(.34,1.56,.64,1) both;position:relative;
+  max-width:380px;width:90vw;
+}
+.win-page::before{content:'';position:absolute;left:0;top:0;bottom:0;width:16px;background:linear-gradient(90deg,#8a6820,#c8a84a 40%,#8a6820);}
+@keyframes pageOpen{from{transform:perspective(600px) rotateY(-90deg);opacity:0;}to{transform:perspective(600px) rotateY(0);opacity:1;}}
+.win-icon{font-size:2.5rem;margin-bottom:.6rem;}
+.win-h{font-family:'Cinzel',serif;font-size:1.8rem;font-weight:900;color:var(--ink);}
+.win-stars{font-size:1.5rem;letter-spacing:.2em;margin:.5rem 0;}
+.win-sub{font-style:italic;color:var(--muted);margin-bottom:1.4rem;font-size:.9rem;}
+.win-stats{display:flex;justify-content:center;gap:2rem;margin-bottom:1.4rem;}
+.wstat{text-align:center;}
+.wstat-n{font-family:'Cinzel',serif;font-size:1.4rem;font-weight:900;color:var(--ink);}
+.wstat-l{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);}
+.win-row{display:flex;gap:.5rem;justify-content:center;}
+.wbtn{background:var(--ink);color:var(--gold2);border:1px solid var(--gold3);padding:.7rem 1.4rem;border-radius:var(--r);cursor:pointer;font-family:'Cinzel',serif;font-size:.7rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;transition:all .2s;}
+.wbtn:hover{background:#1a1408;transform:translateY(-1px);}
+.wbtn.sec{background:transparent;color:var(--muted);border-color:rgba(139,105,50,.2);}
+
+/* particles */
+#pfx{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:45;}
+.pfx-p{position:absolute;border-radius:50%;animation:pfxanim var(--dur) ease-out forwards;}
+@keyframes pfxanim{0%{opacity:1;transform:scale(1) translate(0,0);}100%{opacity:0;transform:scale(0) translate(var(--tx),var(--ty));}}
+
+/* ══════════════════════ BOOK OF WORLDS — INTRO / WORLD SELECT / WORLD MAP ══════════════════════ */
+#sBookIntro{background:#000;padding:0;display:block;}
+#bkCv{position:fixed;inset:0;display:block;filter:saturate(1.18) contrast(1.1) brightness(0.98);}
+#sBookIntro::after{
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:radial-gradient(ellipse 70% 65% at 50% 48%, transparent 40%, rgba(0,0,0,.55) 100%);
+}
+#bkMuteBtn{
+  position:absolute;top:20px;right:150px;color:var(--gold);background:rgba(20,15,8,.35);
+  border:1px solid rgba(200,168,74,.35);width:36px;height:36px;font-size:.9rem;
+  border-radius:50%;cursor:pointer;pointer-events:auto;backdrop-filter:blur(4px);
+  transition:all .25s ease;
+}
+#bkMuteBtn:hover{background:rgba(200,168,74,.15);}
+#bkUi{position:fixed;inset:0;pointer-events:none;z-index:2;}
+#bkHint{
+  position:absolute;bottom:8%;left:50%;transform:translateX(-50%);
+  color:var(--gold2);letter-spacing:.35em;text-transform:uppercase;font-size:.7rem;
+  opacity:0;transition:opacity 1.4s ease;text-shadow:0 0 20px rgba(255,200,100,.8);pointer-events:none;
+}
+#bkHint.show{opacity:.85;animation:bkPulse 2.4s ease-in-out infinite;}
+@keyframes bkPulse{0%,100%{opacity:.55;}50%{opacity:1;}}
+#bkFade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity 1.1s ease;}
+#bkFade.on{opacity:1;}
+#bkSkipBtn{
+  position:absolute;top:20px;right:22px;color:var(--gold);background:rgba(20,15,8,.35);
+  border:1px solid rgba(200,168,74,.35);padding:.5rem 1rem;font-size:.62rem;letter-spacing:.22em;
+  text-transform:uppercase;border-radius:2px;cursor:pointer;pointer-events:auto;backdrop-filter:blur(4px);
+  transition:all .25s ease;font-family:inherit;
+}
+#bkSkipBtn:hover{background:rgba(200,168,74,.15);color:var(--gold2);}
+
+#sWorldSelect{background:radial-gradient(ellipse 90% 70% at 50% 30%,#140f22 0%,var(--bg) 100%);flex-direction:column;padding:4vh 0;}
+.ws-wrap{max-width:960px;width:92%;text-align:center;}
+.ws-eyebrow{font-size:.65rem;letter-spacing:.4em;text-transform:uppercase;color:var(--gold);opacity:.85;margin-bottom:.5rem;}
+.ws-title{font-size:1.9rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold2);text-shadow:0 0 30px rgba(243,220,138,.35);margin-bottom:.3rem;}
+.ws-sub{font-size:.7rem;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;margin-bottom:2.4rem;}
+#wsCelebrate{
+  max-width:640px;margin:0 auto 1.4rem;padding:.7rem 1.2rem;border:1px solid rgba(200,168,74,.4);
+  border-radius:6px;background:rgba(200,168,74,.08);color:var(--gold2);font-size:.75rem;letter-spacing:.1em;
+  opacity:0;transform:translateY(-6px);transition:all .5s ease;pointer-events:none;
+}
+#wsCelebrate.show{opacity:1;transform:translateY(0);}
+.ws-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.4rem;}
+.ws-card{
+  position:relative;border-radius:14px;padding:1.6rem 1.1rem;cursor:pointer;overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);background:linear-gradient(160deg,rgba(255,255,255,.04),rgba(0,0,0,.2));
+  transition:transform .35s ease,border-color .35s ease,box-shadow .35s ease;
+}
+.ws-card:hover{transform:translateY(-6px);}
+.ws-card.locked{cursor:default;opacity:.68;}
+.ws-card.locked:hover{transform:none;}
+.ws-card-glow{position:absolute;inset:-40%;border-radius:50%;filter:blur(30px);opacity:.35;pointer-events:none;transition:opacity .4s ease;}
+.ws-card:hover .ws-card-glow{opacity:.55;}
+.ws-card-icon{font-size:2.2rem;margin-bottom:.6rem;position:relative;filter:drop-shadow(0 0 12px currentColor);}
+.ws-card-name{font-size:.95rem;letter-spacing:.18em;text-transform:uppercase;position:relative;margin-bottom:.25rem;}
+.ws-card-sub{font-size:.62rem;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;position:relative;}
+.ws-card-lock{font-size:.6rem;letter-spacing:.15em;color:var(--muted);margin-top:.6rem;position:relative;text-transform:uppercase;}
+.ws-card-chain{position:absolute;inset:0;border-radius:14px;border:1px dashed rgba(150,150,170,.25);pointer-events:none;}
+.ws-back{margin-top:2.2rem;background:transparent;border:none;color:var(--muted);font-size:.65rem;letter-spacing:.2em;text-transform:uppercase;cursor:pointer;font-family:inherit;}
+.ws-back:hover{color:var(--gold);}
+
+#sWorldMap{background:radial-gradient(ellipse 90% 70% at 50% 20%,#140f22 0%,var(--bg) 100%);align-items:flex-start;flex-direction:column;}
+.wm-header{width:100%;text-align:center;padding:2.2rem 1rem 1rem;position:relative;z-index:3;}
+.wm-back{position:absolute;left:22px;top:22px;background:rgba(20,15,8,.35);border:1px solid rgba(200,168,74,.3);color:var(--gold);
+  padding:.5rem 1rem;font-size:.62rem;letter-spacing:.15em;text-transform:uppercase;border-radius:4px;cursor:pointer;font-family:inherit;}
+.wm-back:hover{background:rgba(200,168,74,.12);}
+.wm-title{font-size:1.5rem;letter-spacing:.25em;text-transform:uppercase;color:var(--gold2);text-shadow:0 0 24px rgba(243,220,138,.3);}
+.wm-sub{font-size:.66rem;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-top:.3rem;}
+.wm-scroll{position:relative;width:100%;flex:1;overflow-y:auto;overflow-x:hidden;}
+#wmPathSvg{position:absolute;left:0;top:0;width:100%;height:100%;}
+.wm-path-seg{fill:none;stroke-width:.6;stroke-linecap:round;}
+.wm-path-seg.unlit{stroke:rgba(255,255,255,.08);}
+.wm-path-seg.lit{stroke:var(--gold2);filter:drop-shadow(0 0 4px rgba(243,220,138,.7));}
+#wmNodes{position:relative;width:100%;height:100%;}
+.wm-node{
+  position:absolute;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;
+  border:2px solid rgba(255,255,255,.12);background:radial-gradient(circle,rgba(255,255,255,.06),rgba(0,0,0,.3));
+  transition:transform .25s ease,box-shadow .3s ease;font-size:.75rem;color:var(--gold2);
+}
+.wm-node:hover{transform:translate(-50%,-50%) scale(1.08);}
+.wm-node .wm-node-n{font-size:.95rem;font-weight:600;}
+.wm-node .wm-node-star{position:absolute;top:-14px;font-size:.85rem;filter:drop-shadow(0 0 6px rgba(243,220,138,.8));}
+.wm-node.locked{cursor:default;color:var(--muted);border-color:rgba(255,255,255,.06);opacity:.55;}
+.wm-node.locked:hover{transform:translate(-50%,-50%);}
+.wm-node.unlocked{border-color:rgba(200,168,74,.55);box-shadow:0 0 22px rgba(200,168,74,.35);}
+.wm-node.completed{border-color:var(--gold2);box-shadow:0 0 26px rgba(243,220,138,.55);background:radial-gradient(circle,rgba(200,168,74,.18),rgba(0,0,0,.3));}
+.wm-comingsoon{
+  width:100%;text-align:center;padding-top:20vh;color:var(--muted);font-style:italic;font-size:.9rem;letter-spacing:.05em;line-height:1.9;
+}
+.wm-comingsoon span{display:block;font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;opacity:.7;margin-top:.4rem;font-style:normal;}
+</style>
+</head>
+<body>
+
+<!-- Persistent FX overlays: used by level-transition flashes (startLevel/nextLevel)
+     and by mechanic + win particle effects (rainFx/moonFx/fireFx/confetti).
+     Kept outside every .screen so they render regardless of which screen is active. -->
+<div id="orbFlash"></div>
+<div id="pfx"></div>
+
+<!-- BOOK OF WORLDS — OPENING CINEMATIC -->
+<div class="screen" id="sBookIntro">
+  <canvas id="bkCv"></canvas>
+  <div id="bkUi">
+    <div id="bkHint">Touch the Book</div>
+    <button id="bkSkipBtn">Skip Intro ▸</button>
+    <button id="bkMuteBtn" title="Toggle ambience">🔊</button>
+  </div>
+  <div id="bkFade"></div>
+</div>
+
+<!-- WORLD SELECT -->
+<div class="screen off" id="sWorldSelect">
+  <div class="ws-wrap">
+    <div class="ws-eyebrow">✦ The Book of Worlds ✦</div>
+    <div class="ws-title">Choose a Chapter</div>
+    <div class="ws-sub">Four worlds sleep within its pages</div>
+    <div id="wsCelebrate"></div>
+    <div class="ws-grid" id="wsGrid"></div>
+    <button class="ws-back" onclick="goTitle()">← Return to Title</button>
+    <button class="ws-back" onclick="window.playBookIntro()" style="margin-left:1.4rem">🎬 Replay Intro</button>
+  </div>
+</div>
+
+<!-- WORLD MAP (per-world level path) -->
+<div class="screen off" id="sWorldMap">
+  <div class="wm-header">
+    <button class="wm-back" onclick="goWorldSelect()">← Book of Worlds</button>
+    <div class="wm-title" id="wmTitle"></div>
+    <div class="wm-sub" id="wmSub"></div>
+  </div>
+  <div class="wm-scroll" id="wmScroll">
+    <svg id="wmPathSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+    <div id="wmNodes"></div>
+  </div>
+</div>
+
+<!-- LEVEL SELECT -->
+<div class="screen off" id="sLevels">
+  <div class="ls-scroll">
+    <div class="ls-header">
+      <div class="ls-h1">Visions of the <span>Book</span></div>
+      <div class="ls-sub">31 Visions revealed so far · Six Worlds awaken as the pages turn</div>
+    </div>
+    <div class="ls-tabs" id="lstabs"></div>
+    <div id="tierSections"></div>
+    <button class="ls-back" onclick="goTitle()">← Return to the Book</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div class="screen off" id="sGame">
+  <canvas id="gc"></canvas>
+  <div id="movect">Moves: <span id="mc">0</span> &nbsp;|&nbsp; Best: <span id="mb">—</span> &nbsp;|&nbsp; Par: <span id="mp">—</span></div>
+  <div id="hud">
+    <div class="hud-top">
+      <div class="hud-left">
+        <div class="hud-chapter" id="hchap"></div>
+        <div class="hud-name" id="hname"></div>
+        <div class="hud-hint" id="hhint"></div>
+        <div class="crlist" id="crlist"></div>
+      </div>
+      <div class="hud-right">
+        <div class="hud-btns">
+          <button class="hbtn" onclick="backToWorldMap()">⬅ Chapters</button>
+          <button class="hbtn" onclick="restartLevel()">↺ Restart</button>
+          <button class="hbtn hint" onclick="requestHint()">✦ Hint</button>
+        </div>
+        <div class="ctrl-panel" id="ctrlpanel"></div>
+      </div>
+    </div>
+    <div></div><!-- spacer -->
+    <div class="sbar" id="sbar"></div>
+  </div>
+  <div id="objpanel"><div class="obj-title">Objectives</div><div id="objlist"></div></div>
+  <div id="feed"></div>
+  <div id="toast" class="off"></div>
+
+  <!-- OPENING ACT: cinematic riddle overlay -->
+  <div id="riddle">
+    <div class="riddle-page">
+      <div class="riddle-corner tl"></div><div class="riddle-corner tr"></div>
+      <div class="riddle-corner bl"></div><div class="riddle-corner br"></div>
+      <div class="riddle-chapter" id="rdlChapter"></div>
+      <div><span class="riddle-cap" id="rdlCap"></span><span class="riddle-text" id="rdlText"></span></div>
+      <div class="riddle-schematic" id="rdlSchema"></div>
+      <div class="riddle-go"><button class="riddle-skip gthread" onclick="dismissRiddle()">Begin the Chapter ✦</button></div>
+    </div>
+  </div>
+
+  <div id="win">
+    <div class="win-page">
+      <div class="win-icon">📖</div>
+      <div class="win-h">Chapter Complete</div>
+      <div class="win-stars" id="wstars">⭐⭐⭐</div>
+      <div class="win-sub" id="wsub"></div>
+      <div class="win-stats">
+        <div class="wstat"><div class="wstat-n" id="wmoves">0</div><div class="wstat-l">Moves</div></div>
+        <div class="wstat"><div class="wstat-n" id="wtime">0s</div><div class="wstat-l">Time</div></div>
+      </div>
+      <div class="win-row">
+        <button class="wbtn gthread" id="wnext" onclick="nextLevel()">Next →</button>
+        <button class="wbtn sec" onclick="restartLevel()">↺ Retry</button>
+        <button class="wbtn sec" onclick="backToWorldMap()">All Chapters</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+//  FOLD — The Living Book · Ultimate Edition
+//  30 Chapters · 15 Creature Types · 12 Mechanics · 4 Tiers of Mastery
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── CREATURE DATABASE ────────────────────────────────────────────────────────
+const CRDB = {
+  turtle:    {e:"🐢",n:"Turtle",    body:0x3a7a2a,head:0x2a5a1a,sz:.22,rule:"flat ground, no steep slopes",weight:"light"},
+  rabbit:    {e:"🐰",n:"Rabbit",    body:0xe8d8b8,head:0xd0a888,sz:.18,rule:"underground tunnels",weight:"light"},
+  bird:      {e:"🐦",n:"Bird",      body:0xe03a1a,head:0xb02a0a,sz:.17,rule:"needs updraft or open sky",weight:"flyer"},
+  fox:       {e:"🦊",n:"Fox",       body:0xd47020,head:0xa84a10,sz:.20,rule:"hidden layered paths or night",weight:"light"},
+  fish:      {e:"🐟",n:"Fish",      body:0x3a80c8,head:0x2a60a8,sz:.16,rule:"needs filled water channels",weight:"aquatic"},
+  bear:      {e:"🐻",n:"Bear",      body:0x7a5030,head:0x4a2818,sz:.26,rule:"breaks stone doors, heavy",weight:"heavy"},
+  owl:       {e:"🦉",n:"Owl",       body:0xa08050,head:0x706030,sz:.19,rule:"flies only in darkness",weight:"flyer"},
+  deer:      {e:"🦌",n:"Deer",      body:0xc08848,head:0x986030,sz:.21,rule:"forest & autumn paths",weight:"light"},
+  frog:      {e:"🐸",n:"Frog",      body:0x3a8a2a,head:0x287a18,sz:.17,rule:"rain + lily pads",weight:"aquatic"},
+  wolf:      {e:"🐺",n:"Wolf",      body:0x707070,head:0x484848,sz:.22,rule:"winter & night paths",weight:"light"},
+  butterfly: {e:"🦋",n:"Butterfly", body:0xd860a0,head:0xa03870,sz:.15,rule:"bloomed flowers, spring",weight:"flyer"},
+  dragon:    {e:"🐉",n:"Dragon",    body:0x6020a0,head:0x401080,sz:.24,rule:"master — all paths, clears obstacles",weight:"heavy"},
+  panda:     {e:"🐼",n:"Panda",     body:0xe8e8e8,head:0xd0d0d0,sz:.23,rule:"bamboo groves only",weight:"heavy"},
+  elephant:  {e:"🐘",n:"Elephant",  body:0x909090,head:0x686868,sz:.28,rule:"heavy — triggers pressure plates",weight:"heavy"},
+  phoenix:   {e:"🦅",n:"Phoenix",   body:0xff6020,head:0xff2000,sz:.20,rule:"fire paths, resets when home",weight:"flyer"},
+  cat:       {e:"🐱",n:"Cat",       body:0x383838,head:0x202020,sz:.18,rule:"slips through portal stones",weight:"light"},
+  bat:       {e:"🦇",n:"Bat",       body:0x2a1a3a,head:0x1a0a28,sz:.15,rule:"flies inverted paths — night + gravity inversion only",weight:"flyer"},
+};
+
+// ─── SEASON DATABASE ──────────────────────────────────────────────────────────
+const SZNDB = {
+  spring:{e:"🌸",n:"Spring", sky:0x87ceeb,fog:0xb8e0a0,gnd:0x5ab83a},
+  summer:{e:"☀️",n:"Summer", sky:0x4a9ad4,fog:0xe8d870,gnd:0xd0a030},
+  autumn:{e:"🍂",n:"Autumn", sky:0xa07060,fog:0xd09050,gnd:0xb85a20},
+  winter:{e:"❄️",n:"Winter", sky:0x9ab0d8,fog:0xd0dce8,gnd:0xd0e4f8},
+  night: {e:"🌙",n:"Night",  sky:0x08101e,fog:0x0a1020,gnd:0x2a3848},
+  storm: {e:"⛈️",n:"Storm",  sky:0x282838,fog:0x383848,gnd:0x486030},
+  dusk:  {e:"🌅",n:"Dusk",   sky:0xd06040,fog:0xe09060,gnd:0x906020},
+};
+
+// ─── MECHANICS DATABASE ───────────────────────────────────────────────────────
+// `cooldown` (seconds) marks mechanics that, once deactivated, cannot be
+// re-triggered until the gate clears — used by Hard/Extreme chapters to force
+// deliberate sequencing instead of toggle-spamming.
+const MCHDB = {
+  rain:      {e:"🌧️",n:"Rain",       desc:"fills water channels"},
+  wind:      {e:"🌬️",n:"Wind",       desc:"updraft for flyers"},
+  lilypad:   {e:"🪷",n:"Lily Pads",  desc:"frog crossing pads"},
+  moonbeam:  {e:"🌕",n:"Moonbeam",   desc:"illuminates night paths"},
+  torch:     {e:"🔥",n:"Torch",      desc:"lights dark caverns"},
+  stonedoor: {e:"🪨",n:"Stone Gate", desc:"bear can open it"},
+  tide:      {e:"🌊",n:"Tide",       desc:"raises ocean level"},
+  vines:     {e:"🌿",n:"Vines",      desc:"climbing walls for deer"},
+  crystalkey:{e:"💎",n:"Crystal Key",desc:"unlocks gem doors"},
+  pressure:  {e:"⚙️",n:"Pressure",   desc:"elephant triggers plate"},
+  bamboo:    {e:"🎋",n:"Bamboo",     desc:"panda's path material"},
+  firepath:  {e:"🔥",n:"Fire Path",  desc:"phoenix walks it — evaporates water for land creatures, blocks fish"},
+  portal:    {e:"💫",n:"Portal Stone",desc:"lights a waystone — cat only walks while it glows"},
+  gravityflip:{e:"🔄",n:"Gravity Inversion",desc:"inverts the sanctum at night — bat can fly the ceiling paths"},
+};
+
+// Mechanics that, once toggled OFF after being ON, lock for a short cooldown.
+// Used to enforce "timed mechanical cooldown gates" in Hard/Extreme chapters.
+const COOLDOWN_MECHS = {firepath:6,tide:5,pressure:4,crystalkey:5,gravityflip:5,portal:4};
+// ═══════════════════════════════════════════════════════════════════════════════
+//  30 DEEPLY DESIGNED LEVELS — Four Tiers of Mastery
+//  Each level carries a `riddle` (poetic couplet for the Opening Act overlay)
+//  and a `schema` (plain architectural layer breakdown) — the player may read
+//  either, or skip straight into the fold.
+// ═══════════════════════════════════════════════════════════════════════════════
+const LEVELS = [
+
+// ═══════════════════════ TIER I — EASY (Chapters I–VIII) ═══════════════════════
+// ────────────────────────────────────────────────────────────────────────── L1
+{id:0,name:"Meadow Awakening",chapter:"Chapter I",tier:"easy",par:4,
+ startSeason:"spring",avSeasons:["spring","summer"],
+ riddle:"A page turns soft beneath the sun —\nwhat's buried wakes when grass is done.",
+ schema:"2 folds. Meadow opens the surface. Burrow opens beneath it. Turtle walks on top; Rabbit needs the tunnel.",
+ creatures:[
+   {type:"turtle",homeL:1,sx:-1.8,sz:.6,homeX:1.4,homeZ:-.5},
+   {type:"rabbit",homeL:2,sx:.5,sz:.5,homeX:-1,homeZ:-.8},
+ ],
+ layers:[
+   {id:0,n:"Sky",      c:0x87ceeb,w:8,d:5,y:0,   fold:false,deps:[]},
+   {id:1,n:"Meadow",   c:0x5ab83a,w:7,d:4,y:-.32,fold:true, deps:[]},
+   {id:2,n:"Burrow",   c:0xc49a5a,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+ ],
+ mechs:[],
+ chains:[
+   {t:"layer:1",m:"🌿 Meadow folds — soft earth visible below"},
+   {t:"layer:2",m:"🐰 Burrow opens — Rabbit finds the way!"},
+ ],
+ objectives:["Fold Meadow","Reveal Burrow","Guide Rabbit home","Guide Turtle home"],
+ hint:"Fold Meadow first, then Burrow. Turtle walks the surface, Rabbit dives underground"},
+
+// ────────────────────────────────────────────────────────────────────────── L2
+{id:1,name:"The Lily Pond",chapter:"Chapter II",tier:"easy",par:5,
+ startSeason:"spring",avSeasons:["spring","summer","winter"],
+ riddle:"Sky weeps until the pond runs deep —\nwhere petals float, the small ones leap.",
+ schema:"2 folds. Rain fills the Pond layer once opened. Lily Pads let Frog cross; Fish only needs the water itself.",
+ creatures:[
+   {type:"fish",homeL:2,sx:-1.6,sz:.5,homeX:1.2,homeZ:-.6},
+   {type:"frog",homeL:2,sx:.7,sz:.4,homeX:-1.3,homeZ:-.7},
+ ],
+ layers:[
+   {id:0,n:"Sky",    c:0x87ceeb,w:8,d:5,y:0,   fold:false,deps:[]},
+   {id:1,n:"Meadow", c:0x5ab83a,w:7,d:4,y:-.32,fold:true, deps:[]},
+   {id:2,n:"Pond",   c:0x3a70a0,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+ ],
+ mechs:["rain","lilypad"],
+ chains:[
+   {t:"mech:rain",   m:"🌧️ Rain begins — pond fills slowly"},
+   {t:"mech:lilypad",m:"🪷 Lily pads float — Frog sees a path!"},
+   {t:"layer:2",     m:"🌊 Pond revealed — Fish can swim!"},
+   {t:"season:winter",m:"❄️ Pond freezes — both can cross!"},
+ ],
+ objectives:["Activate Rain","Deploy Lily Pads","Fold Meadow","Open Pond — guide Fish & Frog"],
+ hint:"Rain fills the pond. Lily pads let Frog cross. Both need the Pond layer open"},
+
+// ────────────────────────────────────────────────────────────────────────── L3
+{id:2,name:"Forest Canopy",chapter:"Chapter III",tier:"easy",par:6,
+ startSeason:"autumn",avSeasons:["spring","autumn","winter"],
+ riddle:"Three roofs of leaf and root and stone —\neach creature climbs to find its own.",
+ schema:"3 folds. Canopy → Forest → Roots. Butterfly needs Spring or Wind. Deer needs Vines. Rabbit just needs Roots open.",
+ creatures:[
+   {type:"deer",homeL:2,sx:-1.4,sz:.6,homeX:1.3,homeZ:-.5},
+   {type:"butterfly",homeL:1,sx:.6,sz:.4,homeX:-1.2,homeZ:-.6},
+   {type:"rabbit",homeL:3,sx:-.5,sz:.7,homeX:.8,homeZ:-.8},
+ ],
+ layers:[
+   {id:0,n:"Sky",    c:0xa07060,w:8,d:5,y:0,   fold:false,deps:[]},
+   {id:1,n:"Canopy", c:0x3a7020,w:7,d:4,y:-.32,fold:true, deps:[]},
+   {id:2,n:"Forest", c:0x6a8a3a,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+   {id:3,n:"Roots",  c:0x8a6030,w:5,d:3,y:-.96, fold:true, deps:[2]},
+ ],
+ mechs:["wind","vines"],
+ chains:[
+   {t:"season:spring",m:"🌸 Flowers bloom — Butterfly stirs!"},
+   {t:"mech:wind",   m:"🌬️ Wind stirs leaves — Butterfly takes flight"},
+   {t:"mech:vines",  m:"🌿 Vines extend — Deer can climb!"},
+   {t:"layer:3",     m:"🌳 Root network revealed — Rabbit tunnels through"},
+ ],
+ objectives:["Spring or Wind for Butterfly","Vines for Deer","3 layers deep for Rabbit"],
+ hint:"Butterfly needs Spring blooms or Wind. Deer climbs vines. Rabbit digs to the Roots"},
+
+// ────────────────────────────────────────────────────────────────────────── L4
+{id:3,name:"Stone Keep",chapter:"Chapter IV",tier:"easy",par:7,
+ startSeason:"summer",avSeasons:["spring","summer","autumn"],
+ riddle:"A gate of stone forgets its name —\nuntil a heavy paw lays claim.",
+ schema:"3 folds. Courtyard → Dungeon → Vault. Bear must slam the Stone Gate open before Fox or Bear themself can pass.",
+ creatures:[
+   {type:"bear",homeL:3,sx:-1.8,sz:.5,homeX:1.5,homeZ:-.5},
+   {type:"fox", homeL:2,sx:.6,sz:.5,homeX:-1.4,homeZ:-.7},
+   {type:"rabbit",homeL:1,sx:-.4,sz:.8,homeX:.9,homeZ:-.4},
+ ],
+ layers:[
+   {id:0,n:"Sky",      c:0x5ba3d4,w:8,d:5,y:0,   fold:false,deps:[]},
+   {id:1,n:"Courtyard",c:0x9a8a78,w:7,d:4,y:-.32,fold:true, deps:[]},
+   {id:2,n:"Dungeon",  c:0x6a5a48,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+   {id:3,n:"Vault",    c:0x4a3a28,w:5,d:3,y:-.96, fold:true, deps:[2]},
+ ],
+ mechs:["stonedoor","torch"],
+ chains:[
+   {t:"mech:stonedoor",m:"🪨 Bear slams the gate — stone grinds open!"},
+   {t:"mech:torch",    m:"🔥 Torch lit — dungeon shadows retreat"},
+   {t:"layer:2",       m:"🗝️ Dungeon open — Fox slips through silently"},
+   {t:"layer:3",       m:"⚔️ The Vault — Bear claims the deepest chamber"},
+ ],
+ objectives:["Bear opens stone gate","Light the torch","Dungeon → Fox","Vault → Bear"],
+ hint:"Bear needs the Stone Gate active to move at all. Fox needs Torch lit or night/dusk. Both need their layer open"},
+
+// ────────────────────────────────────────────────────────────────────────── L5
+{id:4,name:"Cloudtop Aerie",chapter:"Chapter V",tier:"easy",par:6,
+ startSeason:"autumn",avSeasons:["autumn","spring","storm","night"],
+ riddle:"No ladder reaches where birds reside —\nonly the wind may be their guide.",
+ schema:"2 folds. Sky-Reach opens the high ledge. Bird needs Wind active or a calm migratory season (Spring/Autumn).",
+ creatures:[
+   {type:"bird",homeL:2,sx:-1.5,sz:.6,homeX:1.3,homeZ:-.5},
+   {type:"owl", homeL:2,sx:.8,sz:.5,homeX:-1.2,homeZ:-.6},
+ ],
+ layers:[
+   {id:0,n:"Sky",     c:0xa07060,w:8,d:5,y:0,   fold:false,deps:[]},
+   {id:1,n:"Cliffside",c:0x8a7a68,w:7,d:4,y:-.32,fold:true, deps:[]},
+   {id:2,n:"Sky-Reach",c:0xc8c0b0,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+ ],
+ mechs:["wind","moonbeam"],
+ chains:[
+   {t:"mech:wind",    m:"🌬️ Updrafts rise from the cliff — Bird lifts off"},
+   {t:"season:night", m:"🌙 Night falls — Owl's eyes open"},
+   {t:"mech:moonbeam",m:"🌕 Moonbeam pierces the dark — Owl takes wing"},
+ ],
+ objectives:["Fold Cliffside","Fold Sky-Reach","Wind or calm season for Bird","Night + Moonbeam for Owl"],
+ hint:"Bird needs Wind (or Spring/Autumn calm). Owl only flies at Night or Dusk, and wants Moonbeam too"},
+
+// ────────────────────────────────────────────────────────────────────────── L6
+{id:5,name:"The Bamboo Grove",chapter:"Chapter VI",tier:"easy",par:6,
+ startSeason:"spring",avSeasons:["spring","summer"],
+ riddle:"Green stalks grow tall in quiet rows —\nonly the gentle giant knows.",
+ schema:"2 folds. Grove Floor opens the bamboo stand. Panda needs the Bamboo mechanic active; Rabbit just needs the layer.",
+ creatures:[
+   {type:"panda",homeL:2,sx:-1.6,sz:.5,homeX:1.3,homeZ:-.5},
+   {type:"rabbit",homeL:1,sx:.6,sz:.6,homeX:-1.1,homeZ:-.7},
+ ],
+ layers:[
+   {id:0,n:"Sky",       c:0x87ceeb,w:8,d:5,y:0,   fold:false,deps:[]},
+   {id:1,n:"Grove Edge",c:0x4a8a2a,w:7,d:4,y:-.32,fold:true, deps:[]},
+   {id:2,n:"Grove Floor",c:0x2a6a1a,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+ ],
+ mechs:["bamboo"],
+ chains:[
+   {t:"mech:bamboo",m:"🎋 Bamboo stalks rise — Panda's home material!"},
+   {t:"layer:2",    m:"🐼 Grove Floor revealed — a quiet sanctuary"},
+ ],
+ objectives:["Fold Grove Edge","Activate Bamboo","Open Grove Floor","Guide Panda & Rabbit home"],
+ hint:"Panda needs the Bamboo mechanic active and the Grove Floor open. Rabbit only needs Grove Edge"},
+
+// ────────────────────────────────────────────────────────────────────────── L7
+{id:6,name:"Tidepool Shore",chapter:"Chapter VII",tier:"easy",par:7,
+ startSeason:"summer",avSeasons:["spring","summer","storm"],
+ riddle:"The sea forgets, then sea remembers —\nfish wait out the in-between tethers.",
+ schema:"3 folds. Beach → Shallows → Reef. Tide must rise to fill the Reef; Fish needs Tide or Rain; Turtle only needs Beach.",
+ creatures:[
+   {type:"fish",homeL:3,sx:-1.7,sz:.5,homeX:1.4,homeZ:-.5},
+   {type:"turtle",homeL:1,sx:.5,sz:.6,homeX:-1.2,homeZ:-.6},
+ ],
+ layers:[
+   {id:0,n:"Sky",     c:0x4a9ad4,w:8,d:5,y:0,   fold:false,deps:[]},
+   {id:1,n:"Beach",   c:0xe0d0a0,w:7,d:4,y:-.32,fold:true, deps:[]},
+   {id:2,n:"Shallows",c:0x4a90c0,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+   {id:3,n:"Reef",    c:0x2a6090,w:5,d:3,y:-.96, fold:true, deps:[2]},
+ ],
+ mechs:["tide","rain"],
+ chains:[
+   {t:"mech:tide",m:"🌊 The tide rises — the reef fills with sea"},
+   {t:"layer:3", m:"🐟 Reef revealed — Fish glides home"},
+ ],
+ objectives:["Fold Beach","Fold Shallows","Raise the Tide","Reef → Fish home"],
+ hint:"Tide (or heavy Rain) fills the Reef for Fish. Turtle only needs the Beach folded"},
+
+// ────────────────────────────────────────────────────────────────────────── L8
+{id:7,name:"Twilight Hollow",chapter:"Chapter VIII",tier:"easy",par:8,
+ startSeason:"dusk",avSeasons:["dusk","night","autumn"],
+ riddle:"Between the day and dark there's room —\nfor those who wait on dusk to bloom.",
+ schema:"3 folds. Hollow → Underbrush → Den. Fox needs Dusk/Night or Torch. Wolf needs Night or Winter. Deer needs Vines or Autumn.",
+ creatures:[
+   {type:"fox",homeL:2,sx:-1.6,sz:.5,homeX:1.3,homeZ:-.5},
+   {type:"wolf",homeL:3,sx:.7,sz:.4,homeX:-1.3,homeZ:-.7},
+   {type:"deer",homeL:1,sx:-.3,sz:.7,homeX:.9,homeZ:-.5},
+ ],
+ layers:[
+   {id:0,n:"Sky",        c:0xd06040,w:8,d:5,y:0,   fold:false,deps:[]},
+   {id:1,n:"Hollow",     c:0x6a5040,w:7,d:4,y:-.32,fold:true, deps:[]},
+   {id:2,n:"Underbrush", c:0x4a3a2a,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+   {id:3,n:"Den",        c:0x2a1c14,w:5,d:3,y:-.96, fold:true, deps:[2]},
+ ],
+ mechs:["torch","vines","moonbeam"],
+ chains:[
+   {t:"mech:torch",   m:"🔥 Torch lit in the hollow — Fox emerges"},
+   {t:"mech:vines",   m:"🌿 Vines coil through underbrush — Deer treads safely"},
+   {t:"season:night", m:"🌙 Night falls complete — Wolf stirs in the Den"},
+ ],
+ objectives:["Fox: Dusk/Night or Torch","Deer: Autumn or Vines","Wolf: Night or Winter, Den open"],
+ hint:"Fox loves Dusk and Night, or Torch by day. Deer needs Autumn or Vines. Wolf needs the Den open at Night or Winter"},
+
+// ═══════════════════════ TIER II — MEDIUM (Chapters IX–XVI) ═══════════════════════
+// ────────────────────────────────────────────────────────────────────────── L9
+{id:8,name:"The Frozen Crossing",chapter:"Chapter IX",tier:"medium",par:9,
+ startSeason:"summer",avSeasons:["summer","winter","spring"],
+ riddle:"Summer's fish cannot walk the wolf's own road —\nwinter must seal what summer let flow.",
+ schema:"4 folds. River → Banks → Ravine → Cave. Fish needs Summer/Spring water flowing; Wolf needs Winter ice over the same ground. The seasons must alternate — a counter-acting hazard.",
+ creatures:[
+   {type:"fish",homeL:2,sx:-1.7,sz:.6,homeX:1.4,homeZ:-.5},
+   {type:"wolf",homeL:2,sx:.5,sz:.5,homeX:-1.3,homeZ:-.7},
+   {type:"rabbit",homeL:4,sx:-.4,sz:.7,homeX:.9,homeZ:-.5},
+ ],
+ layers:[
+   {id:0,n:"Sky",     c:0x9ab0d8,w:8,d:5,y:0,    fold:false,deps:[]},
+   {id:1,n:"Banks",   c:0xb8c8a0,w:7,d:4,y:-.32, fold:true, deps:[]},
+   {id:2,n:"River",   c:0x4a90c0,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+   {id:3,n:"Ravine",  c:0x707888,w:5,d:3,y:-.96, fold:true, deps:[2]},
+   {id:4,n:"Cave",    c:0x383848,w:4,d:2.5,y:-1.28,fold:true,deps:[3]},
+ ],
+ mechs:["rain","tide"],
+ chains:[
+   {t:"season:summer",m:"☀️ Summer thaw — the river runs for Fish"},
+   {t:"season:winter", m:"❄️ Winter seals the river — Wolf crosses the ice"},
+   {t:"layer:4", m:"🕳️ Cave revealed — Rabbit slips through the dark"},
+ ],
+ objectives:["Fish crosses in Summer/Spring water","Wolf crosses frozen Winter ground","Rabbit reaches the Cave"],
+ hint:"Fish and Wolf can never go home in the same season — swap between Summer/Spring and Winter to free them both"},
+
+// ────────────────────────────────────────────────────────────────────────── L10
+{id:9,name:"Garden of Four Winds",chapter:"Chapter X",tier:"medium",par:9,
+ startSeason:"spring",avSeasons:["spring","summer","autumn","winter"],
+ riddle:"Each season wakes a different bloom —\nfour guests await in one small room.",
+ schema:"3 folds. Terrace → Garden → Grotto. Butterfly needs Spring. Deer needs Autumn. Owl needs Night-like Winter dusk + Moonbeam. All must be visited in turn.",
+ creatures:[
+   {type:"butterfly",homeL:2,sx:-1.6,sz:.6,homeX:1.3,homeZ:-.5},
+   {type:"deer",homeL:2,sx:.6,sz:.5,homeX:-1.2,homeZ:-.6},
+   {type:"frog",homeL:3,sx:-.5,sz:.7,homeX:.8,homeZ:-.7},
+ ],
+ layers:[
+   {id:0,n:"Sky",    c:0x87ceeb,w:8,d:5,y:0,    fold:false,deps:[]},
+   {id:1,n:"Terrace",c:0x9ab87a,w:7,d:4,y:-.32, fold:true, deps:[]},
+   {id:2,n:"Garden", c:0x5ab83a,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+   {id:3,n:"Grotto", c:0x3a7090,w:5,d:3,y:-.96, fold:true, deps:[2]},
+ ],
+ mechs:["rain","lilypad","wind"],
+ chains:[
+   {t:"season:spring",m:"🌸 Spring blooms — Butterfly stirs in the Garden"},
+   {t:"season:autumn",m:"🍂 Autumn turns the leaves — Deer finds its path"},
+   {t:"mech:rain",     m:"🌧️ Rain feeds the Grotto pool"},
+   {t:"mech:lilypad",  m:"🪷 Lily pads bridge the Grotto — Frog leaps free"},
+ ],
+ objectives:["Spring for Butterfly","Autumn for Deer","Rain + Lily Pads + Grotto for Frog"],
+ hint:"You'll need to swap seasons mid-puzzle: Spring frees Butterfly, Autumn frees Deer. Frog needs Rain and Lily Pads in the Grotto"},
+
+// ────────────────────────────────────────────────────────────────────────── L11
+{id:10,name:"Sunken Cathedral",chapter:"Chapter XI",tier:"medium",par:10,
+ startSeason:"storm",avSeasons:["storm","spring","winter","night"],
+ riddle:"Water claims the nave and choir —\nonly storm-tide answers fish's desire.",
+ schema:"4 folds. Narthex → Nave → Crypt → Abyss. Fish needs Tide AND Storm together. Owl needs Night/Dusk + Moonbeam, reachable only once Crypt opens.",
+ creatures:[
+   {type:"fish",homeL:3,sx:-1.7,sz:.5,homeX:1.5,homeZ:-.5},
+   {type:"owl", homeL:4,sx:.6,sz:.5,homeX:-1.3,homeZ:-.6},
+ ],
+ layers:[
+   {id:0,n:"Sky",    c:0x282838,w:8,d:5,y:0,     fold:false,deps:[]},
+   {id:1,n:"Narthex",c:0x6a6a78,w:7,d:4,y:-.32,  fold:true, deps:[]},
+   {id:2,n:"Nave",   c:0x484858,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+   {id:3,n:"Crypt",  c:0x303040,w:5,d:3,y:-.96,  fold:true, deps:[2]},
+   {id:4,n:"Abyss",  c:0x181820,w:4,d:2.5,y:-1.28,fold:true,deps:[3]},
+ ],
+ mechs:["tide","moonbeam"],
+ chains:[
+   {t:"mech:tide", m:"🌊 The storm-tide surges through the Crypt"},
+   {t:"layer:3",   m:"⛪ Crypt opens — water and dark mingle"},
+   {t:"mech:moonbeam",m:"🌕 Moonbeam finds the Abyss — Owl can see"},
+ ],
+ objectives:["Storm + Tide active, Crypt open → Fish","Night/Dusk + Moonbeam, Abyss open → Owl"],
+ hint:"Fish needs Storm season with Tide active. Owl needs the deepest layer open plus Moonbeam at Night or Dusk"},
+
+// ────────────────────────────────────────────────────────────────────────── L12
+{id:11,name:"The Pressure Vaults",chapter:"Chapter XII",tier:"medium",par:10,
+ startSeason:"summer",avSeasons:["summer","spring","autumn"],
+ riddle:"A heavy step the floor remembers —\nplates that wake in warmer embers.",
+ schema:"4 folds. Antechamber → Gearworks → Vault → Sanctum. Elephant needs Pressure active in a warm season — but Pressure only holds while Elephant's layer stays open, so sequence matters.",
+ creatures:[
+   {type:"elephant",homeL:3,sx:-1.7,sz:.5,homeX:1.5,homeZ:-.5},
+   {type:"bear",homeL:2,sx:.6,sz:.5,homeX:-1.3,homeZ:-.6},
+   {type:"fox",homeL:4,sx:-.4,sz:.7,homeX:.9,homeZ:-.6},
+ ],
+ layers:[
+   {id:0,n:"Sky",         c:0x4a9ad4,w:8,d:5,y:0,    fold:false,deps:[]},
+   {id:1,n:"Antechamber", c:0x8a8070,w:7,d:4,y:-.32, fold:true, deps:[]},
+   {id:2,n:"Gearworks",   c:0x6a6050,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+   {id:3,n:"Vault",       c:0x4a4030,w:5,d:3,y:-.96, fold:true, deps:[2]},
+   {id:4,n:"Sanctum",     c:0x2a2418,w:4,d:2.5,y:-1.28,fold:true,deps:[3]},
+ ],
+ mechs:["pressure","stonedoor","torch"],
+ chains:[
+   {t:"mech:stonedoor",m:"🪨 Bear forces the Gearworks gate"},
+   {t:"mech:pressure", m:"⚙️ Pressure plate groans under great weight"},
+   {t:"layer:3",       m:"🏛️ Vault opens — Elephant's path clears"},
+   {t:"mech:torch",    m:"🔥 Torch lit in the Sanctum — Fox finds the way"},
+ ],
+ objectives:["Bear opens Gearworks gate","Pressure active in warm season, Vault open → Elephant","Torch + Sanctum → Fox"],
+ hint:"Bear's Stone Gate opens Gearworks. Elephant needs Pressure active (warm season) with Vault open. Fox needs Torch and the Sanctum"},
+
+// ────────────────────────────────────────────────────────────────────────── L13
+{id:12,name:"Crystal Caverns",chapter:"Chapter XIII",tier:"medium",par:10,
+ startSeason:"night",avSeasons:["night","dusk","storm"],
+ riddle:"Gems remember a borrowed light —\nkeyed to the dark, unlocked by night.",
+ schema:"4 folds. Mouth → Tunnels → Geode → Heart. Crystal Key plus darkness opens the Geode for Owl; Wolf only needs Night and the Tunnels.",
+ creatures:[
+   {type:"wolf",homeL:2,sx:-1.6,sz:.5,homeX:1.4,homeZ:-.5},
+   {type:"owl",homeL:3,sx:.6,sz:.4,homeX:-1.3,homeZ:-.7},
+   {type:"dragon",homeL:4,sx:-.3,sz:.7,homeX:.9,homeZ:-.5},
+ ],
+ layers:[
+   {id:0,n:"Sky",    c:0x08101e,w:8,d:5,y:0,     fold:false,deps:[]},
+   {id:1,n:"Mouth",  c:0x484850,w:7,d:4,y:-.32,  fold:true, deps:[]},
+   {id:2,n:"Tunnels",c:0x383850,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+   {id:3,n:"Geode",  c:0x5060a0,w:5,d:3,y:-.96,  fold:true, deps:[2]},
+   {id:4,n:"Heart",  c:0x7050c0,w:4,d:2.5,y:-1.28,fold:true,deps:[3]},
+ ],
+ mechs:["crystalkey","moonbeam","stonedoor"],
+ chains:[
+   {t:"mech:crystalkey",m:"💎 Crystal Key resonates in the dark"},
+   {t:"mech:moonbeam",  m:"🌕 Moonbeam threads through Tunnels"},
+   {t:"layer:3",        m:"💠 Geode cracks open — light spills inward"},
+   {t:"mech:stonedoor",  m:"🪨 The Heart's stone door yields to Dragon"},
+ ],
+ objectives:["Night + Tunnels open → Wolf","Crystal Key + Moonbeam, Geode open → Owl","Stone Gate, Heart open → Dragon"],
+ hint:"Wolf just needs Night and Tunnels. Owl needs Crystal Key + Moonbeam at the Geode. Dragon needs the Stone Gate to reach the Heart"},
+
+// ────────────────────────────────────────────────────────────────────────── L14
+{id:13,name:"Marsh of Echoes",chapter:"Chapter XIV",tier:"medium",par:11,
+ startSeason:"spring",avSeasons:["spring","storm","winter"],
+ riddle:"The marsh forgets which voice to keep —\nfrog, fish and fox all wade the deep.",
+ schema:"4 folds. Reeds → Marshwater → Mudflats → Hollow. Frog needs Rain+Lilypads, Fish needs Tide/Storm water, Fox needs Dusk/Torch through the Hollow — three creatures sharing overlapping wet terrain.",
+ creatures:[
+   {type:"frog",homeL:2,sx:-1.6,sz:.6,homeX:1.4,homeZ:-.5},
+   {type:"fish",homeL:3,sx:.6,sz:.5,homeX:-1.3,homeZ:-.6},
+   {type:"fox",homeL:4,sx:-.4,sz:.7,homeX:.9,homeZ:-.6},
+ ],
+ layers:[
+   {id:0,n:"Sky",       c:0x87ceeb,w:8,d:5,y:0,    fold:false,deps:[]},
+   {id:1,n:"Reeds",     c:0x6a8a3a,w:7,d:4,y:-.32, fold:true, deps:[]},
+   {id:2,n:"Marshwater",c:0x4a7a8a,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+   {id:3,n:"Mudflats",  c:0x5a4a3a,w:5,d:3,y:-.96, fold:true, deps:[2]},
+   {id:4,n:"Hollow",    c:0x3a2a20,w:4,d:2.5,y:-1.28,fold:true,deps:[3]},
+ ],
+ mechs:["rain","lilypad","tide","torch"],
+ chains:[
+   {t:"mech:rain",   m:"🌧️ Rain swells the Marshwater"},
+   {t:"mech:lilypad",m:"🪷 Lily pads settle — Frog's bridge is ready"},
+   {t:"mech:tide",   m:"🌊 Tide pushes brine into the Mudflats"},
+   {t:"mech:torch",  m:"🔥 Torch gutters alive in the Hollow"},
+ ],
+ objectives:["Rain + Lily Pads, Marshwater open → Frog","Tide/Storm, Mudflats open → Fish","Dusk or Torch, Hollow open → Fox"],
+ hint:"Frog wants Rain and Lily Pads. Fish wants Tide or Storm water. Fox wants Dusk or Torch, deep in the Hollow"},
+
+// ────────────────────────────────────────────────────────────────────────── L15
+{id:14,name:"Highland Pass",chapter:"Chapter XV",tier:"medium",par:11,
+ startSeason:"autumn",avSeasons:["autumn","winter","spring"],
+ riddle:"The pass is steep and changes face —\nwinter's ice, then spring's embrace.",
+ schema:"5 folds. Foothills → Switchback → Ridge → Snowline → Summit. Deer needs Autumn/Vines; Wolf needs Winter; Dragon needs both Stone Gate and Moonbeam at the Summit — a multi-stage climb.",
+ creatures:[
+   {type:"deer",homeL:2,sx:-1.7,sz:.5,homeX:1.5,homeZ:-.5},
+   {type:"wolf",homeL:3,sx:.6,sz:.5,homeX:-1.3,homeZ:-.6},
+   {type:"dragon",homeL:5,sx:-.4,sz:.7,homeX:.9,homeZ:-.6},
+ ],
+ layers:[
+   {id:0,n:"Sky",       c:0xa07060,w:8,d:5,y:0,     fold:false,deps:[]},
+   {id:1,n:"Foothills", c:0x8a7050,w:7,d:4,y:-.32,  fold:true, deps:[]},
+   {id:2,n:"Switchback",c:0x7a6048,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+   {id:3,n:"Ridge",     c:0x9ab0d8,w:5,d:3,y:-.96,  fold:true, deps:[2]},
+   {id:4,n:"Snowline",  c:0xd0dce8,w:4.3,d:2.7,y:-1.28,fold:true,deps:[3]},
+   {id:5,n:"Summit",    c:0xf0f4f8,w:3.6,d:2.3,y:-1.6, fold:true, deps:[4]},
+ ],
+ mechs:["vines","stonedoor","moonbeam"],
+ chains:[
+   {t:"mech:vines",    m:"🌿 Vines lattice the Switchback"},
+   {t:"season:winter", m:"❄️ Winter grips the Ridge and Snowline"},
+   {t:"mech:stonedoor",m:"🪨 Stone Gate at the Summit grinds aside"},
+   {t:"mech:moonbeam", m:"🌕 Moonbeam crowns the Summit"},
+   {t:"layer:5",       m:"🏔️ The Summit is reached — Dragon surveys all"},
+ ],
+ objectives:["Autumn/Vines, Switchback open → Deer","Winter, Ridge open → Wolf","Stone Gate + Moonbeam, Summit open → Dragon"],
+ hint:"Climb in stages: Deer needs Autumn or Vines early, Wolf needs Winter at the Ridge, and Dragon needs both Stone Gate and Moonbeam at the very top"},
+
+// ────────────────────────────────────────────────────────────────────────── L16
+{id:15,name:"The Phoenix Hearth",chapter:"Chapter XVI",tier:"medium",par:12,
+ startSeason:"summer",avSeasons:["summer","night","dusk","storm"],
+ riddle:"Fire dries the path it crosses over —\nwhat swims must wait till embers smother.",
+ schema:"5 folds. Hearthstones → Embercourt → Ashfields → Cinder Vault → Pyre. Phoenix needs Fire Path active; Fish needs water — but Fire Path evaporates standing water, so the two mechanics actively counteract each other.",
+ creatures:[
+   {type:"phoenix",homeL:5,sx:-1.7,sz:.5,homeX:1.5,homeZ:-.5},
+   {type:"fish",homeL:3,sx:.6,sz:.5,homeX:-1.3,homeZ:-.6},
+   {type:"owl",homeL:4,sx:-.4,sz:.7,homeX:.9,homeZ:-.6},
+ ],
+ layers:[
+   {id:0,n:"Sky",        c:0x4a9ad4,w:8,d:5,y:0,     fold:false,deps:[]},
+   {id:1,n:"Hearthstones",c:0x9a6a40,w:7,d:4,y:-.32, fold:true, deps:[]},
+   {id:2,n:"Embercourt", c:0x8a5030,w:6,d:3.5,y:-.64,fold:true,deps:[1]},
+   {id:3,n:"Ashfields",  c:0x6a4030,w:5,d:3,y:-.96,  fold:true, deps:[2]},
+   {id:4,n:"Cinder Vault",c:0x4a2818,w:4.3,d:2.7,y:-1.28,fold:true,deps:[3]},
+   {id:5,n:"Pyre",       c:0x2a1408,w:3.6,d:2.3,y:-1.6, fold:true, deps:[4]},
+ ],
+ mechs:["firepath","tide","moonbeam"],
+ chains:[
+   {t:"mech:tide",     m:"🌊 Water rises through the Ashfields for Fish"},
+   {t:"mech:firepath",m:"🔥 Fire Path ignites — water hisses into steam!"},
+   {t:"mech:moonbeam", m:"🌕 Moonbeam settles over the Cinder Vault"},
+   {t:"layer:5",       m:"🔥 The Pyre opens — Phoenix returns to flame"},
+ ],
+ objectives:["Tide active (no Firepath), Ashfields open → Fish","Night/Dusk + Moonbeam, Cinder Vault open → Owl","Fire Path active, Pyre open → Phoenix"],
+ hint:"Fire Path and Tide fight each other — Fish needs Tide WITHOUT Fire Path active. Send Fish home first, then ignite the Fire Path for Phoenix"},
+
+// ═══════════════════════ TIER III — HARD (Chapters XVII–XXIV) ═══════════════════════
+// ────────────────────────────────────────────────────────────────────────── L17
+{id:16,name:"The Clockwork Sanctum",chapter:"Chapter XVII",tier:"hard",par:14,
+ startSeason:"summer",avSeasons:["summer","spring","autumn"],
+ riddle:"The gears forget if pushed too soon —\nlet pressure rest before its boon.",
+ schema:"5 folds. Forecourt → Gears I → Gears II → Inner Works → Sanctum. Pressure plate has a cooldown — once released, it must rest before re-triggering. Elephant and Bear share the Inner Works in sequence.",
+ creatures:[
+   {type:"elephant",homeL:3,sx:-1.7,sz:.5,homeX:1.5,homeZ:-.5},
+   {type:"bear",homeL:4,sx:.6,sz:.5,homeX:-1.3,homeZ:-.6},
+   {type:"panda",homeL:5,sx:-.4,sz:.7,homeX:.9,homeZ:-.6},
+ ],
+ layers:[
+   {id:0,n:"Sky",        c:0x4a9ad4,w:8,d:5,y:0,      fold:false,deps:[]},
+   {id:1,n:"Forecourt",  c:0x9a9078,w:7,d:4,y:-.32,   fold:true, deps:[]},
+   {id:2,n:"Gears I",    c:0x7a7058,w:6,d:3.5,y:-.64, fold:true, deps:[1]},
+   {id:3,n:"Gears II",   c:0x5a5040,w:5,d:3,y:-.96,   fold:true, deps:[2]},
+   {id:4,n:"Inner Works",c:0x3a3428,w:4.3,d:2.7,y:-1.28,fold:true,deps:[3]},
+   {id:5,n:"Sanctum",    c:0x201c14,w:3.6,d:2.3,y:-1.6,  fold:true, deps:[4]},
+ ],
+ mechs:["pressure","stonedoor","bamboo"],
+ chains:[
+   {t:"mech:pressure", m:"⚙️ Pressure plate groans — gears begin to turn"},
+   {t:"layer:3",       m:"⚙️ Gears II engage — the Inner Works stir"},
+   {t:"mech:stonedoor",m:"🪨 Bear forces the Inner Works gate"},
+   {t:"mech:bamboo",   m:"🎋 Bamboo lattice grows through the Sanctum"},
+ ],
+ objectives:["Pressure active (warm season), Gears II open → Elephant","Stone Gate, Inner Works open → Bear","Bamboo, Sanctum open → Panda"],
+ hint:"Pressure has a cooldown once released — plan your warm-season window before triggering it. Send Elephant home, then work the Stone Gate for Bear, then Bamboo for Panda"},
+
+// ────────────────────────────────────────────────────────────────────────── L18
+{id:17,name:"Abyssal Trench",chapter:"Chapter XVIII",tier:"hard",par:15,
+ startSeason:"storm",avSeasons:["storm","winter","night"],
+ riddle:"The trench breathes once, then holds its breath —\ntide's brief surge means life, not death.",
+ schema:"5 folds. Surface → Shelf → Slope → Trench → Abyssal Floor. Tide has a cooldown gate — Fish must reach the Trench during the active surge window, before it recedes and locks.",
+ creatures:[
+   {type:"fish",homeL:4,sx:-1.7,sz:.5,homeX:1.5,homeZ:-.5},
+   {type:"owl",homeL:3,sx:.6,sz:.5,homeX:-1.3,homeZ:-.6},
+   {type:"wolf",homeL:5,sx:-.4,sz:.7,homeX:.9,homeZ:-.6},
+ ],
+ layers:[
+   {id:0,n:"Sky",      c:0x282838,w:8,d:5,y:0,      fold:false,deps:[]},
+   {id:1,n:"Surface",  c:0x3a5a78,w:7,d:4,y:-.32,   fold:true, deps:[]},
+   {id:2,n:"Shelf",    c:0x2a4868,w:6,d:3.5,y:-.64, fold:true, deps:[1]},
+   {id:3,n:"Slope",    c:0x1a3858,w:5,d:3,y:-.96,   fold:true, deps:[2]},
+   {id:4,n:"Trench",   c:0x102848,y:-1.28,w:4.3,d:2.7,fold:true,deps:[3]},
+   {id:5,n:"Abyssal Floor",c:0x081830,w:3.6,d:2.3,y:-1.6,fold:true,deps:[4]},
+ ],
+ mechs:["tide","moonbeam","torch"],
+ chains:[
+   {t:"mech:tide",    m:"🌊 The surge breathes through the Trench — brief and urgent"},
+   {t:"layer:4",      m:"🐟 Trench opens — Fish must hurry"},
+   {t:"mech:moonbeam",m:"🌕 Moonbeam finds the Shelf — Owl watches from above"},
+   {t:"mech:torch",   m:"🔥 Torch flares at the Abyssal Floor — Wolf descends"},
+ ],
+ objectives:["Tide active during its surge, Trench open → Fish","Night/Dusk + Moonbeam, Shelf open → Owl","Torch or Night, Abyssal Floor open → Wolf"],
+ hint:"Tide locks on a cooldown after it recedes — fold the Trench open BEFORE you trigger Tide so Fish is ready the instant the surge hits"},
+
+// ────────────────────────────────────────────────────────────────────────── L19
+{id:18,name:"The Glasswing Apiary",chapter:"Chapter XIX",tier:"hard",par:14,
+ startSeason:"spring",avSeasons:["spring","summer","autumn","night"],
+ riddle:"Wings of glass need bloom and breeze together —\nneither alone survives the weather.",
+ schema:"5 folds. Hedgerow → Apiary → Hivewall → Honeycomb → Queen's Chamber. Butterfly needs Spring AND Wind simultaneously (not either/or, both). Owl needs Night deep in the Honeycomb.",
+ creatures:[
+   {type:"butterfly",homeL:3,sx:-1.7,sz:.5,homeX:1.5,homeZ:-.5},
+   {type:"owl",homeL:5,sx:.6,sz:.5,homeX:-1.3,homeZ:-.6},
+   {type:"fox",homeL:4,sx:-.4,sz:.7,homeX:.9,homeZ:-.6},
+ ],
+ layers:[
+   {id:0,n:"Sky",            c:0x87ceeb,w:8,d:5,y:0,      fold:false,deps:[]},
+   {id:1,n:"Hedgerow",       c:0x6a9a3a,w:7,d:4,y:-.32,   fold:true, deps:[]},
+   {id:2,n:"Apiary",         c:0xd0b850,w:6,d:3.5,y:-.64, fold:true, deps:[1]},
+   {id:3,n:"Hivewall",       c:0xc8a040,w:5,d:3,y:-.96,   fold:true, deps:[2]},
+   {id:4,n:"Honeycomb",      c:0xa07820,w:4.3,d:2.7,y:-1.28,fold:true,deps:[3]},
+   {id:5,n:"Queen's Chamber",c:0x705010,w:3.6,d:2.3,y:-1.6,  fold:true, deps:[4]},
+ ],
+ mechs:["wind","torch","moonbeam"],
+ chains:[
+   {t:"mech:wind",    m:"🌬️ Wind rushes the Apiary — wings tremble, waiting on bloom"},
+   {t:"season:spring",m:"🌸 Spring bloom completes the Apiary's promise"},
+   {t:"mech:torch",   m:"🔥 Torch lights the Hivewall for Fox"},
+   {t:"mech:moonbeam",m:"🌕 Moonbeam crowns the Honeycomb"},
+ ],
+ objectives:["Spring AND Wind together, Hivewall open → Butterfly","Torch, Honeycomb open → Fox","Night + Moonbeam, Queen's Chamber open → Owl"],
+ hint:"Butterfly is strict here: Spring alone or Wind alone won't do — you need BOTH active at once with Hivewall open"},
+
+// ────────────────────────────────────────────────────────────────────────── L20
+{id:19,name:"The Obsidian Forge",chapter:"Chapter XX",tier:"hard",par:16,
+ startSeason:"night",avSeasons:["night","dusk","summer"],
+ riddle:"The forge wakes once, then sleeps a while —\ntime the spark to cross the mile.",
+ schema:"6 folds. Threshold → Bellows → Furnace Hall → Slagfloor → Anvil Deep → Obsidian Core. Firepath has a cooldown gate; Phoenix must reach the Core during its active window while Fire Path simultaneously evaporates a water hazard blocking Bear.",
+ creatures:[
+   {type:"phoenix",homeL:6,sx:-1.8,sz:.4,homeX:1.6,homeZ:-.5},
+   {type:"bear",homeL:5,sx:.6,sz:.5,homeX:-1.4,homeZ:-.6},
+   {type:"dragon",homeL:4,sx:-.4,sz:.7,homeX:.9,homeZ:-.6},
+   {type:"owl",homeL:3,sx:1.2,sz:.3,homeX:-1.5,homeZ:.4},
+ ],
+ layers:[
+   {id:0,n:"Sky",            c:0x08101e,w:8,d:5,y:0,      fold:false,deps:[]},
+   {id:1,n:"Threshold",      c:0x584838,w:7,d:4,y:-.32,   fold:true, deps:[]},
+   {id:2,n:"Bellows",        c:0x483828,w:6,d:3.5,y:-.64, fold:true, deps:[1]},
+   {id:3,n:"Furnace Hall",   c:0x6a3018,w:5,d:3,y:-.96,   fold:true, deps:[2]},
+   {id:4,n:"Slagfloor",      c:0x4a2010,w:4.3,d:2.7,y:-1.28,fold:true,deps:[3]},
+   {id:5,n:"Anvil Deep",     c:0x301808,y:-1.6,w:3.6,d:2.3,fold:true,deps:[4]},
+   {id:6,n:"Obsidian Core",  c:0x100804,w:3,d:2,y:-1.92, fold:true, deps:[5]},
+ ],
+ mechs:["firepath","stonedoor","moonbeam","torch"],
+ chains:[
+   {t:"mech:stonedoor", m:"🪨 Bear forces the Furnace Hall gate"},
+   {t:"mech:moonbeam",  m:"🌕 Moonbeam threads the Bellows for Owl"},
+   {t:"mech:firepath",  m:"🔥 Fire Path roars alight — the forge wakes, briefly"},
+   {t:"layer:6",        m:"🔥 The Obsidian Core — Phoenix's true home"},
+ ],
+ objectives:["Night/Dusk + Moonbeam, Bellows open → Owl","Stone Gate, Furnace Hall open → Bear","Stone Gate, Anvil Deep open → Dragon","Fire Path active, Core open → Phoenix"],
+ hint:"Send Owl and Bear home first using Stone Gate and Moonbeam. Fold all the way to the Core, THEN ignite Fire Path so Phoenix can dash home before it cools"},
+
+// ────────────────────────────────────────────────────────────────────────── L21
+{id:20,name:"The Whispering Permafrost",chapter:"Chapter XXI",tier:"hard",par:16,
+ startSeason:"winter",avSeasons:["winter","night","spring"],
+ riddle:"Ice holds its secrets till the thaw —\nthen gives them all at once, and more.",
+ schema:"6 folds. Tundra → Icefield → Crevasse → Frozen Hall → Glacier Heart → Permafrost Core. Wolf needs Winter throughout; once you thaw to Spring for Frog/Fish, Wolf locks out — non-linear backtracking required.",
+ creatures:[
+   {type:"wolf",homeL:3,sx:-1.8,sz:.4,homeX:1.6,homeZ:-.5},
+   {type:"frog",homeL:4,sx:.6,sz:.5,homeX:-1.4,homeZ:-.6},
+   {type:"fish",homeL:5,sx:-.4,sz:.7,homeX:.9,homeZ:-.6},
+   {type:"owl",homeL:6,sx:1.2,sz:.3,homeX:-1.5,homeZ:.4},
+ ],
+ layers:[
+   {id:0,n:"Sky",            c:0x9ab0d8,w:8,d:5,y:0,      fold:false,deps:[]},
+   {id:1,n:"Tundra",         c:0xc8d8e8,w:7,d:4,y:-.32,   fold:true, deps:[]},
+   {id:2,n:"Icefield",       c:0xb0c8e0,w:6,d:3.5,y:-.64, fold:true, deps:[1]},
+   {id:3,n:"Crevasse",       c:0x90b0d0,w:5,d:3,y:-.96,   fold:true, deps:[2]},
+   {id:4,n:"Frozen Hall",    c:0x7098c0,w:4.3,d:2.7,y:-1.28,fold:true,deps:[3]},
+   {id:5,n:"Glacier Heart",  c:0x5078a8,y:-1.6,w:3.6,d:2.3,fold:true,deps:[4]},
+   {id:6,n:"Permafrost Core",c:0x305888,w:3,d:2,y:-1.92, fold:true, deps:[5]},
+ ],
+ mechs:["rain","lilypad","moonbeam","tide"],
+ chains:[
+   {t:"layer:3",       m:"❄️ Crevasse opens — Wolf finds frozen footing"},
+   {t:"season:spring", m:"🌸 A brief thaw — meltwater floods the lower halls"},
+   {t:"mech:rain",     m:"🌧️ Rain swells the Frozen Hall into a pool"},
+   {t:"mech:lilypad",  m:"🪷 Lily pads ride the meltwater for Frog"},
+   {t:"mech:tide",     m:"🌊 Tide pushes deep water to the Glacier Heart"},
+ ],
+ objectives:["Winter, Crevasse open → Wolf","Spring thaw + Rain + Lily Pads, Frozen Hall open → Frog","Tide, Glacier Heart open → Fish","Night + Moonbeam, Permafrost Core open → Owl"],
+ hint:"Send Wolf home in Winter FIRST — once you thaw to Spring for Frog and Fish, Winter-only Wolf can no longer move. Owl can wait for Night at the very end"},
+
+// ────────────────────────────────────────────────────────────────────────── L22
+{id:21,name:"Thornveil Labyrinth",chapter:"Chapter XXII",tier:"hard",par:17,
+ startSeason:"autumn",avSeasons:["autumn","spring","summer","night"],
+ riddle:"Thorn and vine remember every guest —\nbut only one path serves them best.",
+ schema:"6 folds. Outer Hedge → Thicket → Brambles → Vine Maze → Inner Sanctum → Heartwood. Deer (Vines/Autumn) and Butterfly (Spring/Wind) compete for the same Vine Maze layer with opposing season needs.",
+ creatures:[
+   {type:"deer",homeL:4,sx:-1.8,sz:.4,homeX:1.6,homeZ:-.5},
+   {type:"butterfly",homeL:4,sx:.6,sz:.5,homeX:-1.4,homeZ:-.6},
+   {type:"fox",homeL:5,sx:-.4,sz:.7,homeX:.9,homeZ:-.6},
+   {type:"panda",homeL:6,sx:1.2,sz:.3,homeX:-1.5,homeZ:.4},
+ ],
+ layers:[
+   {id:0,n:"Sky",          c:0xa07060,w:8,d:5,y:0,      fold:false,deps:[]},
+   {id:1,n:"Outer Hedge",  c:0x6a8a3a,w:7,d:4,y:-.32,   fold:true, deps:[]},
+   {id:2,n:"Thicket",      c:0x5a7a2a,w:6,d:3.5,y:-.64, fold:true, deps:[1]},
+   {id:3,n:"Brambles",     c:0x4a6a1a,w:5,d:3,y:-.96,   fold:true, deps:[2]},
+   {id:4,n:"Vine Maze",    c:0x3a5a10,w:4.3,d:2.7,y:-1.28,fold:true,deps:[3]},
+   {id:5,n:"Inner Sanctum",c:0x2a4a08,y:-1.6,w:3.6,d:2.3,fold:true,deps:[4]},
+   {id:6,n:"Heartwood",    c:0x1a3a04,w:3,d:2,y:-1.92, fold:true, deps:[5]},
+ ],
+ mechs:["vines","wind","torch","bamboo"],
+ chains:[
+   {t:"mech:vines",    m:"🌿 Vines knot through the Maze — Deer treads carefully"},
+   {t:"mech:wind",     m:"🌬️ Wind threads the same Maze — Butterfly takes the other path"},
+   {t:"mech:torch",    m:"🔥 Torch lit — Fox slips past the Sanctum"},
+   {t:"mech:bamboo",   m:"🎋 Bamboo claims the Heartwood — Panda's true home"},
+ ],
+ objectives:["Autumn/Vines, Vine Maze open → Deer","Spring+Wind, Vine Maze open → Butterfly","Torch, Inner Sanctum open → Fox","Bamboo, Heartwood open → Panda"],
+ hint:"Deer and Butterfly both need the Vine Maze open but want opposite seasons — send one home, swap seasons, then the other. Fox and Panda finish the depths"},
+
+// ────────────────────────────────────────────────────────────────────────── L23
+{id:22,name:"The Tide-Locked Archive",chapter:"Chapter XXIII",tier:"hard",par:17,
+ startSeason:"storm",avSeasons:["storm","night","spring","winter"],
+ riddle:"Pages drown, then dry, then drown again —\nread quickly in the moment between.",
+ schema:"6 folds. Entry Hall → Reading Room → Stacks → Flooded Wing → Sealed Vault → Deep Archive. Tide is on a strict cooldown gate; Fish and Owl must both be routed through the Flooded Wing window without wasting the surge.",
+ creatures:[
+   {type:"fish",homeL:4,sx:-1.8,sz:.4,homeX:1.6,homeZ:-.5},
+   {type:"owl",homeL:5,sx:.6,sz:.5,homeX:-1.4,homeZ:-.6},
+   {type:"wolf",homeL:3,sx:-.4,sz:.7,homeX:.9,homeZ:-.6},
+   {type:"dragon",homeL:6,sx:1.2,sz:.3,homeX:-1.5,homeZ:.4},
+ ],
+ layers:[
+   {id:0,n:"Sky",          c:0x282838,w:8,d:5,y:0,      fold:false,deps:[]},
+   {id:1,n:"Entry Hall",   c:0x6a6050,w:7,d:4,y:-.32,   fold:true, deps:[]},
+   {id:2,n:"Reading Room", c:0x5a5040,w:6,d:3.5,y:-.64, fold:true, deps:[1]},
+   {id:3,n:"Stacks",       c:0x4a4030,w:5,d:3,y:-.96,   fold:true, deps:[2]},
+   {id:4,n:"Flooded Wing", c:0x304050,w:4.3,d:2.7,y:-1.28,fold:true,deps:[3]},
+   {id:5,n:"Sealed Vault", c:0x1a2838,y:-1.6,w:3.6,d:2.3,fold:true,deps:[4]},
+   {id:6,n:"Deep Archive", c:0x101820,w:3,d:2,y:-1.92, fold:true, deps:[5]},
+ ],
+ mechs:["tide","moonbeam","crystalkey","stonedoor"],
+ chains:[
+   {t:"layer:3",        m:"📚 Stacks open — Wolf finds a path through Night"},
+   {t:"mech:tide",      m:"🌊 The surge floods the Flooded Wing — narrow window"},
+   {t:"mech:moonbeam",  m:"🌕 Moonbeam reaches the Flooded Wing"},
+   {t:"mech:crystalkey",m:"💎 Crystal Key hums — the Sealed Vault trembles"},
+   {t:"mech:stonedoor", m:"🪨 The Deep Archive's stone door falls to Dragon"},
+ ],
+ objectives:["Night, Stacks open → Wolf","Tide surge + Moonbeam, Flooded Wing open → Fish AND Owl together","Crystal Key, Sealed Vault open → (path to Dragon)","Stone Gate, Deep Archive open → Dragon"],
+ hint:"Fold the Flooded Wing open and have BOTH Fish and Owl conditions ready before you trigger Tide — the surge only lasts one window, so don't waste it"},
+
+// ────────────────────────────────────────────────────────────────────────── L24
+{id:23,name:"The Gilded Reliquary",chapter:"Chapter XXIV",tier:"hard",par:18,
+ startSeason:"dusk",avSeasons:["dusk","night","summer","autumn"],
+ riddle:"Six locks, six guardians, one final key —\nthe last fold answers what the first could not see.",
+ schema:"6 folds. Antechapel → Relic Hall → Ossuary → Gilded Stair → Reliquary Vault → The Last Page. Five creatures share four mechanics across cooldown-gated Pressure and Firepath — the first true multi-track Hard finale.",
+ creatures:[
+   {type:"bear",homeL:3,sx:-1.9,sz:.3,homeX:1.6,homeZ:-.5},
+   {type:"fox",homeL:2,sx:.5,sz:.5,homeX:-1.4,homeZ:-.6},
+   {type:"elephant",homeL:4,sx:-.6,sz:.6,homeX:1,homeZ:-.4},
+   {type:"owl",homeL:5,sx:.9,sz:-.4,homeX:-1.5,homeZ:.4},
+   {type:"phoenix",homeL:6,sx:-1.2,sz:-.5,homeX:1.3,homeZ:.5},
+ ],
+ layers:[
+   {id:0,n:"Sky",            c:0xd06040,w:8,d:5,y:0,      fold:false,deps:[]},
+   {id:1,n:"Antechapel",     c:0x9a8050,w:7,d:4,y:-.32,   fold:true, deps:[]},
+   {id:2,n:"Relic Hall",     c:0x8a6840,w:6,d:3.5,y:-.64, fold:true, deps:[1]},
+   {id:3,n:"Ossuary",        c:0x6a5030,w:5,d:3,y:-.96,   fold:true, deps:[2]},
+   {id:4,n:"Gilded Stair",   c:0xb89040,w:4.3,d:2.7,y:-1.28,fold:true,deps:[3]},
+   {id:5,n:"Reliquary Vault",c:0xd0a850,y:-1.6,w:3.6,d:2.3,fold:true,deps:[4]},
+   {id:6,n:"The Last Page",  c:0xf0d878,w:3,d:2,y:-1.92, fold:true, deps:[5]},
+ ],
+ mechs:["stonedoor","torch","pressure","firepath","moonbeam"],
+ chains:[
+   {t:"mech:torch",     m:"🔥 Torch lit — Fox slips into Relic Hall"},
+   {t:"mech:stonedoor", m:"🪨 Bear forces the Ossuary gate"},
+   {t:"mech:pressure",  m:"⚙️ Pressure groans through the Gilded Stair"},
+   {t:"mech:moonbeam",  m:"🌕 Moonbeam crowns the Reliquary Vault"},
+   {t:"mech:firepath",  m:"🔥 Fire Path opens The Last Page to Phoenix"},
+ ],
+ objectives:["Dusk/Torch, Relic Hall open → Fox","Stone Gate, Ossuary open → Bear","Pressure (warm), Gilded Stair open → Elephant","Night+Moonbeam, Reliquary Vault open → Owl","Fire Path, Last Page open → Phoenix"],
+ hint:"Work outward to inward: Fox, then Bear, then Elephant (mind Pressure's cooldown), then Owl at Night, and finally ignite Fire Path for Phoenix's Last Page"},
+
+// ═══════════════════════ TIER IV — EXTREME HARD (Chapters XXV–XXX: Grand Finales) ═══════════════════════
+// ────────────────────────────────────────────────────────────────────────── L25
+{id:24,name:"The Equinox Spire",chapter:"Chapter XXV · Grand Finale",tier:"extreme",par:25,
+ startSeason:"spring",avSeasons:["spring","summer","autumn","winter","night","storm"],
+ riddle:"Six seasons turn about one spire of stone —\neach creature answers to its own.",
+ schema:"7 folds. Foundation → Cloister → Belfry → Spirewinds → Vaulted Choir → Bell Chamber → Apex. Six creatures, six seasonal demands, two mechanics on cooldown. Sequence the seasons in a single non-repeating pass.",
+ creatures:[
+   {type:"butterfly",homeL:2,sx:-1.9,sz:.3,homeX:1.6,homeZ:-.5},
+   {type:"deer",homeL:3,sx:.5,sz:.5,homeX:-1.4,homeZ:-.6},
+   {type:"elephant",homeL:4,sx:-.6,sz:.6,homeX:1,homeZ:-.4},
+   {type:"wolf",homeL:5,sx:.9,sz:-.4,homeX:-1.5,homeZ:.4},
+   {type:"owl",homeL:6,sx:-1.2,sz:-.5,homeX:1.3,homeZ:.5},
+   {type:"dragon",homeL:7,sx:1.4,sz:.2,homeX:-1.2,homeZ:-.3},
+ ],
+ layers:[
+   {id:0,n:"Sky",          c:0x87ceeb,w:9,d:5.5,y:0,      fold:false,deps:[]},
+   {id:1,n:"Foundation",   c:0x8a8070,w:7.8,d:4.6,y:-.32, fold:true, deps:[]},
+   {id:2,n:"Cloister",     c:0x6a9a3a,w:7,d:4.1,y:-.64,   fold:true, deps:[1]},
+   {id:3,n:"Belfry",       c:0xb85a20,w:6.2,d:3.6,y:-.96, fold:true, deps:[2]},
+   {id:4,n:"Spirewinds",   c:0xd0a030,w:5.4,d:3.1,y:-1.28,fold:true, deps:[3]},
+   {id:5,n:"Vaulted Choir",c:0x9ab0d8,w:4.6,d:2.6,y:-1.6, fold:true, deps:[4]},
+   {id:6,n:"Bell Chamber", c:0x08101e,w:3.8,d:2.1,y:-1.92,fold:true, deps:[5]},
+   {id:7,n:"Apex",         c:0xf3dc8a,w:3,d:1.7,y:-2.24,  fold:true, deps:[6]},
+ ],
+ mechs:["wind","vines","pressure","moonbeam","stonedoor"],
+ chains:[
+   {t:"season:spring",m:"🌸 Spring at the Cloister — Butterfly stirs"},
+   {t:"season:autumn",m:"🍂 Autumn at the Belfry — Deer finds its climb"},
+   {t:"mech:pressure", m:"⚙️ Pressure shudders through Spirewinds — Elephant's path"},
+   {t:"season:winter",m:"❄️ Winter claims the Vaulted Choir — Wolf descends"},
+   {t:"mech:moonbeam", m:"🌕 Moonbeam fills the Bell Chamber for Owl"},
+   {t:"mech:stonedoor",m:"🪨 The Apex's final gate opens for Dragon"},
+ ],
+ objectives:["Spring/Wind, Cloister open → Butterfly","Autumn/Vines, Belfry open → Deer","Pressure (warm), Spirewinds open → Elephant","Winter, Vaulted Choir open → Wolf","Night+Moonbeam, Bell Chamber open → Owl","Stone Gate, Apex open → Dragon"],
+ hint:"Plan a single season pass: Spring→Autumn→Summer(for Pressure)→Winter→Night, sending each creature home the instant its window opens before moving on"},
+
+// ────────────────────────────────────────────────────────────────────────── L26
+{id:25,name:"The Drowned Observatory",chapter:"Chapter XXVI · Grand Finale",tier:"extreme",par:27,
+ startSeason:"storm",avSeasons:["storm","night","winter","spring"],
+ riddle:"Stars drown in water, then the water hides —\ntwo lights at once, two opposite tides.",
+ schema:"7 folds. Dome → Catwalks → Lens Hall → Flooded Gallery → Star Vault → Frozen Reach → Eye of the Observatory. Tide (cooldown) and Firepath actively oppose each other across two creatures sharing the Flooded Gallery.",
+ creatures:[
+   {type:"fish",homeL:4,sx:-1.9,sz:.3,homeX:1.6,homeZ:-.5},
+   {type:"owl",homeL:3,sx:.5,sz:.5,homeX:-1.4,homeZ:-.6},
+   {type:"phoenix",homeL:6,sx:-.6,sz:.6,homeX:1,homeZ:-.4},
+   {type:"wolf",homeL:5,sx:.9,sz:-.4,homeX:-1.5,homeZ:.4},
+   {type:"fox",homeL:2,sx:-1.2,sz:-.5,homeX:1.3,homeZ:.5},
+   {type:"dragon",homeL:7,sx:1.4,sz:.2,homeX:-1.2,homeZ:-.3},
+ ],
+ layers:[
+   {id:0,n:"Sky",              c:0x282838,w:9,d:5.5,y:0,      fold:false,deps:[]},
+   {id:1,n:"Dome",             c:0x484858,w:7.8,d:4.6,y:-.32, fold:true, deps:[]},
+   {id:2,n:"Catwalks",         c:0x383850,w:7,d:4.1,y:-.64,   fold:true, deps:[1]},
+   {id:3,n:"Lens Hall",        c:0x303048,w:6.2,d:3.6,y:-.96, fold:true, deps:[2]},
+   {id:4,n:"Flooded Gallery",  c:0x1a3858,w:5.4,d:3.1,y:-1.28,fold:true, deps:[3]},
+   {id:5,n:"Star Vault",       c:0x102848,w:4.6,d:2.6,y:-1.6, fold:true, deps:[4]},
+   {id:6,n:"Frozen Reach",     c:0x9ab0d8,w:3.8,d:2.1,y:-1.92,fold:true, deps:[5]},
+   {id:7,n:"Eye of the Observatory",c:0xf0d878,w:3,d:1.7,y:-2.24,fold:true,deps:[6]},
+ ],
+ mechs:["tide","firepath","moonbeam","torch","stonedoor"],
+ chains:[
+   {t:"mech:torch",    m:"🔥 Torch lit in the Catwalks for Fox"},
+   {t:"mech:moonbeam", m:"🌕 Moonbeam fills the Lens Hall for Owl"},
+   {t:"mech:tide",     m:"🌊 Tide surges the Flooded Gallery — Fish's narrow window"},
+   {t:"mech:stonedoor",m:"🪨 Stone Gate opens the Frozen Reach for Wolf"},
+   {t:"mech:firepath", m:"🔥 Fire Path ignites — what water remained, evaporates"},
+   {t:"layer:7",       m:"🌌 The Eye opens — Dragon and Phoenix both behold it"},
+ ],
+ objectives:["Dusk/Torch, Catwalks open → Fox","Night+Moonbeam, Lens Hall open → Owl","Tide surge, Flooded Gallery open → Fish","Winter+Stone Gate, Frozen Reach open → Wolf","Fire Path, Eye open → Phoenix","Stone Gate, Eye open → Dragon"],
+ hint:"Send Fish home during the Tide surge BEFORE you ever ignite Fire Path — once lit, Fire Path evaporates the water Fish needs for good this run"},
+
+// ────────────────────────────────────────────────────────────────────────── L27
+{id:26,name:"The Bramblewood Recursion",chapter:"Chapter XXVII · Grand Finale",tier:"extreme",par:28,
+ startSeason:"autumn",avSeasons:["autumn","spring","summer","winter","night"],
+ riddle:"The wood loops back on its own design —\nwhat opened once must close, then realign.",
+ schema:"7 folds. Outer Ring → Bramblewood → Thorn Hollow → Vine Spiral → Mossy Deep → Hidden Glade → Heartroot. Deer and Butterfly's opposing seasons return, now joined by Wolf's Winter-lock — three non-linear backtracks in one chapter.",
+ creatures:[
+   {type:"deer",homeL:3,sx:-1.9,sz:.3,homeX:1.6,homeZ:-.5},
+   {type:"butterfly",homeL:3,sx:.5,sz:.5,homeX:-1.4,homeZ:-.6},
+   {type:"wolf",homeL:4,sx:-.6,sz:.6,homeX:1,homeZ:-.4},
+   {type:"panda",homeL:5,sx:.9,sz:-.4,homeX:-1.5,homeZ:.4},
+   {type:"fox",homeL:6,sx:-1.2,sz:-.5,homeX:1.3,homeZ:.5},
+   {type:"bear",homeL:7,sx:1.4,sz:.2,homeX:-1.2,homeZ:-.3},
+ ],
+ layers:[
+   {id:0,n:"Sky",        c:0xa07060,w:9,d:5.5,y:0,      fold:false,deps:[]},
+   {id:1,n:"Outer Ring",  c:0x8a9a3a,w:7.8,d:4.6,y:-.32, fold:true, deps:[]},
+   {id:2,n:"Bramblewood",c:0x6a8a2a,w:7,d:4.1,y:-.64,   fold:true, deps:[1]},
+   {id:3,n:"Thorn Hollow",c:0x5a7a1a,w:6.2,d:3.6,y:-.96, fold:true, deps:[2]},
+   {id:4,n:"Vine Spiral",c:0x4a6a10,w:5.4,d:3.1,y:-1.28,fold:true, deps:[3]},
+   {id:5,n:"Mossy Deep", c:0x3a5a08,w:4.6,d:2.6,y:-1.6, fold:true, deps:[4]},
+   {id:6,n:"Hidden Glade",c:0x2a4a04,w:3.8,d:2.1,y:-1.92,fold:true, deps:[5]},
+   {id:7,n:"Heartroot",  c:0x1a3a00,w:3,d:1.7,y:-2.24,  fold:true, deps:[6]},
+ ],
+ mechs:["vines","wind","stonedoor","bamboo","torch"],
+ chains:[
+   {t:"season:autumn",m:"🍂 Autumn settles the Thorn Hollow — Deer treads"},
+   {t:"mech:vines",   m:"🌿 Vines grip the Vine Spiral"},
+   {t:"season:winter",m:"❄️ Winter locks the wood — Wolf must move now or never"},
+   {t:"mech:bamboo",  m:"🎋 Bamboo claims the Hidden Glade for Panda"},
+   {t:"mech:stonedoor",m:"🪨 Bear's gate falls at the Heartroot"},
+ ],
+ objectives:["Autumn/Vines, Thorn Hollow open → Deer","Spring+Wind, Thorn Hollow open → Butterfly","Winter, Vine Spiral open → Wolf","Bamboo, Mossy Deep open → Panda","Torch/Dusk, Hidden Glade open → Fox","Stone Gate, Heartroot open → Bear"],
+ hint:"Order matters: Deer (Autumn) → Butterfly (Spring) → Wolf (Winter, last chance before you move on) → Panda → Fox → Bear. Once you leave Winter, Wolf cannot return home"},
+
+// ────────────────────────────────────────────────────────────────────────── L28
+{id:27,name:"The Cinderfall Concordance",chapter:"Chapter XXVIII · Grand Finale",tier:"extreme",par:30,
+ startSeason:"summer",avSeasons:["summer","spring","night","dusk","storm"],
+ riddle:"Fire and flood and frost in turn compete —\nthe Concordance demands all three complete.",
+ schema:"8 folds. Outer Vale → Ember Approach → Floodgate → Cinder Span → Frostward Hall → Deepfire Vault → Last Tideway → The Concordance. Firepath and Tide directly counteract across two shared layers — the tightest mechanical knot yet.",
+ creatures:[
+   {type:"phoenix",homeL:5,sx:-1.9,sz:.3,homeX:1.6,homeZ:-.5},
+   {type:"fish",homeL:6,sx:.5,sz:.5,homeX:-1.4,homeZ:-.6},
+   {type:"owl",homeL:4,sx:-.6,sz:.6,homeX:1,homeZ:-.4},
+   {type:"elephant",homeL:3,sx:.9,sz:-.4,homeX:-1.5,homeZ:.4},
+   {type:"wolf",homeL:7,sx:-1.2,sz:-.5,homeX:1.3,homeZ:.5},
+   {type:"dragon",homeL:8,sx:1.4,sz:.2,homeX:-1.2,homeZ:-.3},
+ ],
+ layers:[
+   {id:0,n:"Sky",            c:0x4a9ad4,w:9.4,d:5.8,y:0,     fold:false,deps:[]},
+   {id:1,n:"Outer Vale",     c:0x9a8050,w:8.2,d:4.9,y:-.32,  fold:true, deps:[]},
+   {id:2,n:"Ember Approach", c:0xb85a20,w:7.4,d:4.4,y:-.64,  fold:true, deps:[1]},
+   {id:3,n:"Floodgate",      c:0x3a5a78,w:6.6,d:3.9,y:-.96,  fold:true, deps:[2]},
+   {id:4,n:"Cinder Span",    c:0x6a3018,w:5.8,d:3.4,y:-1.28, fold:true, deps:[3]},
+   {id:5,n:"Frostward Hall", c:0x9ab0d8,w:5,d:2.9,y:-1.6,    fold:true, deps:[4]},
+   {id:6,n:"Deepfire Vault", c:0x4a2010,w:4.2,d:2.4,y:-1.92, fold:true, deps:[5]},
+   {id:7,n:"Last Tideway",   c:0x102848,w:3.4,d:1.9,y:-2.24, fold:true, deps:[6]},
+   {id:8,n:"The Concordance",c:0xf3dc8a,w:2.6,d:1.5,y:-2.56, fold:true, deps:[7]},
+ ],
+ mechs:["firepath","tide","pressure","moonbeam","torch","stonedoor"],
+ chains:[
+   {t:"mech:pressure", m:"⚙️ Pressure shudders the Outer Vale for Elephant"},
+   {t:"mech:moonbeam", m:"🌕 Moonbeam reaches the Cinder Span for Owl"},
+   {t:"mech:tide",     m:"🌊 Tide floods the Floodgate — but cools nothing downstream"},
+   {t:"mech:firepath", m:"🔥 Fire Path roars through the Deepfire Vault — water recoils"},
+   {t:"mech:stonedoor",m:"🪨 The Concordance gate yields at last"},
+ ],
+ objectives:["Pressure (warm), Outer Vale open → Elephant","Night+Moonbeam, Cinder Span open → Owl","Tide, Floodgate open → Fish","Fire Path, Deepfire Vault open → Phoenix","Winter+Stone Gate, Last Tideway open → Wolf","Stone Gate, Concordance open → Dragon"],
+ hint:"Tide and Fire Path both touch the lower halls — send Fish home on Tide alone, fully unwound from Fire Path, before you ever ignite it for Phoenix"},
+
+// ────────────────────────────────────────────────────────────────────────── L29
+{id:28,name:"The Unwritten Margin",chapter:"Chapter XXIX · Grand Finale",tier:"extreme",par:32,
+ startSeason:"night",avSeasons:["night","dusk","spring","summer","autumn","winter"],
+ riddle:"Where the book's ink fades to bare —\nevery creature you've known waits there.",
+ schema:"8 folds. Faded Cover → Marginalia → Erased Chapter → Palimpsest → Blotted Verse → Torn Leaf → Binding Thread → The Unwritten Margin. Eight creatures, near-full mechanic roster, strict season ordering with two cooldown gates layered on top.",
+ creatures:[
+   {type:"fox",homeL:2,sx:-1.9,sz:.3,homeX:1.6,homeZ:-.5},
+   {type:"owl",homeL:3,sx:.5,sz:.5,homeX:-1.4,homeZ:-.6},
+   {type:"deer",homeL:4,sx:-.6,sz:.6,homeX:1,homeZ:-.4},
+   {type:"elephant",homeL:5,sx:.9,sz:-.4,homeX:-1.5,homeZ:.4},
+   {type:"wolf",homeL:6,sx:-1.2,sz:-.5,homeX:1.3,homeZ:.5},
+   {type:"phoenix",homeL:7,sx:1.4,sz:.2,homeX:-1.2,homeZ:-.3},
+   {type:"panda",homeL:6,sx:-1.5,sz:.5,homeX:1.1,homeZ:.3},
+   {type:"dragon",homeL:8,sx:1.6,sz:-.2,homeX:-1,homeZ:-.5},
+ ],
+ layers:[
+   {id:0,n:"Faded Cover",     c:0x08101e,w:9.6,d:5.9,y:0,     fold:false,deps:[]},
+   {id:1,n:"Marginalia",      c:0xc8b890,w:8.4,d:5,   y:-.32, fold:true, deps:[]},
+   {id:2,n:"Erased Chapter",  c:0xa89870,w:7.6,d:4.5, y:-.64, fold:true, deps:[1]},
+   {id:3,n:"Palimpsest",      c:0x887850,w:6.8,d:4,   y:-.96, fold:true, deps:[2]},
+   {id:4,n:"Blotted Verse",   c:0x685838,w:6,d:3.5,   y:-1.28,fold:true, deps:[3]},
+   {id:5,n:"Torn Leaf",       c:0x483820,w:5.2,d:3,   y:-1.6, fold:true, deps:[4]},
+   {id:6,n:"Binding Thread",  c:0x382810,w:4.4,d:2.5, y:-1.92,fold:true, deps:[5]},
+   {id:7,n:"The Spine's End", c:0x281808,w:3.6,d:2,   y:-2.24,fold:true, deps:[6]},
+   {id:8,n:"The Unwritten Margin",c:0xf3dc8a,w:2.8,d:1.6,y:-2.56,fold:true,deps:[7]},
+ ],
+ mechs:["torch","vines","pressure","moonbeam","stonedoor","bamboo","firepath"],
+ chains:[
+   {t:"mech:torch",    m:"🔥 Torch lit in Marginalia — Fox finds the margin's edge"},
+   {t:"mech:moonbeam", m:"🌕 Moonbeam fills the Erased Chapter for Owl"},
+   {t:"season:autumn", m:"🍂 Autumn turns the Palimpsest's hidden leaves for Deer"},
+   {t:"mech:pressure", m:"⚙️ Pressure groans through Blotted Verse for Elephant"},
+   {t:"season:winter", m:"❄️ Winter locks the Torn Leaf — Wolf's only chance"},
+   {t:"mech:bamboo",   m:"🎋 Bamboo claims Binding Thread for Panda"},
+   {t:"mech:firepath", m:"🔥 Fire Path ignites at the Spine's End for Phoenix"},
+   {t:"mech:stonedoor",m:"🪨 The Unwritten Margin opens at last for Dragon"},
+ ],
+ objectives:["Dusk/Torch, Marginalia open → Fox","Night+Moonbeam, Erased Chapter open → Owl","Autumn/Vines, Palimpsest open → Deer","Pressure (warm), Blotted Verse open → Elephant","Winter, Torn Leaf open → Wolf","Bamboo, Binding Thread open → Panda","Fire Path, Spine's End open → Phoenix","Stone Gate, Unwritten Margin open → Dragon"],
+ hint:"Eight creatures, one careful order: Fox→Owl (dark first), then Deer in Autumn, Elephant in a warm season, Wolf last in Winter before moving on, then Panda, Phoenix, and finally Dragon's Stone Gate"},
+
+// ────────────────────────────────────────────────────────────────────────── L30
+{id:29,name:"The First & Final Fold",chapter:"Chapter XXX · The Grand Finale",tier:"extreme",par:35,
+ startSeason:"night",avSeasons:["spring","summer","autumn","winter","night","storm","dusk"],
+ riddle:"Nine folds remain of all that's been —\nthe Book remembers where you've seen.",
+ schema:"9 folds. First Paper → Second Fold → Third Fold → Fourth Fold → Fifth Fold → Sixth Fold → Seventh Fold → Eighth Fold → THE ORIGIN. Eight creatures, all twelve mechanics, every season, two cooldown gates, and a non-linear seasonal backtrack — the absolute mind-bender.",
+ creatures:[
+   {type:"dragon",  homeL:9,sx:-1.9,sz:.3,homeX:1.6,homeZ:-.5},
+   {type:"phoenix", homeL:8,sx:.5,sz:.5,homeX:-1.4,homeZ:-.6},
+   {type:"elephant",homeL:6,sx:-.6,sz:.6,homeX:1,homeZ:-.4},
+   {type:"bear",    homeL:5,sx:1.2,sz:.4,homeX:-.9,homeZ:-.8},
+   {type:"panda",   homeL:4,sx:-.3,sz:-.5,homeX:1.2,homeZ:.5},
+   {type:"owl",     homeL:6,sx:.9,sz:-.4,homeX:-1.5,homeZ:.4},
+   {type:"wolf",    homeL:7,sx:-1.2,sz:-.6,homeX:1.3,homeZ:.6},
+   {type:"fox",     homeL:7,sx:1.4,sz:.3,homeX:-1.2,homeZ:-.4},
+ ],
+ layers:[
+   {id:0,n:"The Void",    c:0x020106,w:11,d:6.5,y:0,     fold:false,deps:[]},
+   {id:1,n:"First Paper", c:0xf0ead8,w:9.5,d:5.5,y:-.32, fold:true, deps:[]},
+   {id:2,n:"Second Fold", c:0xd8c8a8,w:9,d:5,y:-.64,     fold:true, deps:[1]},
+   {id:3,n:"Third Fold",  c:0xc0a880,w:8,d:4.5,y:-.96,   fold:true, deps:[2]},
+   {id:4,n:"Fourth Fold", c:0xa88860,w:7,d:4,y:-1.28,    fold:true, deps:[3]},
+   {id:5,n:"Fifth Fold",  c:0x906840,w:6,d:3.5,y:-1.6,   fold:true, deps:[4]},
+   {id:6,n:"Sixth Fold",  c:0x784820,w:5,d:3,y:-1.92,    fold:true, deps:[5]},
+   {id:7,n:"Seventh Fold",c:0x602808,w:4.5,d:2.8,y:-2.24,fold:true, deps:[6]},
+   {id:8,n:"Eighth Fold", c:0x481c06,w:4,d:2.5,y:-2.56,  fold:true, deps:[7]},
+   {id:9,n:"THE ORIGIN",  c:0x3a1604,w:3.5,d:2.2,y:-2.88,fold:true, deps:[8]},
+ ],
+ mechs:["wind","rain","moonbeam","torch","stonedoor","tide","crystalkey","pressure","bamboo","firepath","lilypad","vines"],
+ chains:[
+   {t:"layer:1",m:"📄 The First Paper — the world begins its unfolding"},
+   {t:"mech:torch",m:"🔥 Torch lit — Fox finds the early dark"},
+   {t:"mech:stonedoor",m:"🪨 Bear's gate falls — the deeper folds beckon"},
+   {t:"mech:bamboo",m:"🎋 Bamboo claims its grove — Panda settles"},
+   {t:"mech:pressure",m:"⚙️ Pressure shudders — Elephant's great weight answers"},
+   {t:"layer:4",m:"✦ Halfway — the ancient fold reveals its pattern"},
+   {t:"season:winter",m:"❄️ Winter — Wolf's only window, take it now"},
+   {t:"mech:moonbeam",m:"🌕 Moonbeam — Owl rises through the dark"},
+   {t:"layer:7",m:"⚡ The Seventh Fold — reality trembles"},
+   {t:"mech:firepath",m:"🔥 Fire Path ignites — Phoenix's last road, water gone"},
+   {t:"layer:9",m:"🌌 THE ORIGIN — the very first fold, where everything began"},
+   {t:"season:spring",m:"🌸 Spring: the world remembers how to live"},
+ ],
+ objectives:["Dusk/Torch, early fold open → Fox","Stone Gate → Bear","Bamboo → Panda","Pressure (warm season, mind cooldown) → Elephant","Winter (only window) → Wolf","Night+Moonbeam → Owl","Fire Path (after Tide work is done) → Phoenix","Stone Gate, deepest fold → Dragon","Guide every creature home — complete the Book"],
+ hint:"THE FINAL CHAPTER: 9 layers, 8 creatures, every mechanic ever devised, every season. Send Wolf home the instant Winter opens — you won't get a second chance. Resolve Tide-dependent moves before ever lighting Fire Path. Work outward to the Origin"},
+
+// ═══════════════════════ TIER V — LEGENDARY (Chapters XXXI–XLV) ═══════════════════════
+// ────────────────────────────────────────────────────────────────────────── L31
+{id:30,name:"The Inverted Sanctum",chapter:"Chapter XXXI",tier:"legendary",par:12,
+ startSeason:"dusk",avSeasons:["dusk","summer","night","autumn"],
+ riddle:"The sanctum bends where shadow leans —\nwhat walks the floor may climb between.",
+ schema:"4 folds. Sanctum Floor → Ember Vault → Gravity Well → Portal Nexus. Elephant needs Pressure in a warm season. Phoenix needs Fire Path. Bat needs Night together with Gravity Inversion — the Well stays dark and unreadable until the Vault below it is lit, a genuinely hidden route. Cat needs its waystone lit by the Portal mechanic. First puzzle to combine two brand-new mechanics with two returning ones.",
+ creatures:[
+   {type:"elephant",homeL:1,sx:-1.5,sz:.5,homeX:1.3,homeZ:-.4},
+   {type:"phoenix", homeL:2,sx:.6,sz:.4,homeX:-1.2,homeZ:-.6},
+   {type:"bat",     homeL:3,sx:-.7,sz:-.5,homeX:1.1,homeZ:.6},
+   {type:"cat",     homeL:4,sx:1.2,sz:-.4,homeX:-1.3,homeZ:.5},
+ ],
+ layers:[
+   {id:0,n:"Sky",           c:0x1a1020,w:8,d:5,y:0,     fold:false,deps:[]},
+   {id:1,n:"Sanctum Floor", c:0x8a6848,w:7,d:4,y:-.32,  fold:true, deps:[]},
+   {id:2,n:"Ember Vault",   c:0x903018,w:6,d:3.5,y:-.64, fold:true, deps:[1]},
+   {id:3,n:"Gravity Well",  c:0x201838,w:5,d:3,y:-.96,   fold:true, deps:[2]},
+   {id:4,n:"Portal Nexus",  c:0x402868,w:4.5,d:2.6,y:-1.28,fold:true,deps:[3]},
+ ],
+ mechs:["pressure","firepath","gravityflip","portal"],
+ chains:[
+   {t:"layer:1",     m:"🪨 Sanctum Floor folds — the stone remembers weight"},
+   {t:"season:summer",m:"☀️ Summer warms the sanctum — pressure plates wake"},
+   {t:"mech:pressure",m:"⚙️ Pressure answers — Elephant feels the floor give"},
+   {t:"layer:2",     m:"🔥 Ember Vault opens beneath the floor"},
+   {t:"mech:firepath",m:"🔥 Fire Path ignites — Phoenix finds its road"},
+   {t:"layer:3",     m:"🌀 Gravity Well revealed — a route no map showed"},
+   {t:"season:night", m:"🌙 Night falls — the Well begins to turn"},
+   {t:"mech:gravityflip",m:"🔄 Gravity inverts — Bat climbs the ceiling-path"},
+   {t:"layer:4",     m:"💫 Portal Nexus folds open — a waystone hums"},
+   {t:"mech:portal",  m:"💫 Portal Stone lit — Cat slips across the floor"},
+ ],
+ objectives:["Fold Sanctum Floor","Summer + Pressure → Elephant","Fold Ember Vault, Fire Path → Phoenix","Fold Gravity Well","Night + Gravity Inversion → Bat","Fold Portal Nexus, Portal Stone → Cat"],
+ hint:"Fold the Floor first. Switch to Summer and hold Pressure for Elephant. Fold the Vault and light Fire Path for Phoenix. The Well only makes sense once the Vault is lit — fold it, then go to Night and flip Gravity for Bat. Finally fold the Nexus and light the Portal Stone for Cat"},
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ENGINE
+// ═══════════════════════════════════════════════════════════════════════════════
+const TIERS=[
+  {key:"easy",   label:"Easy · I–VIII",     range:[0,8]},
+  {key:"medium", label:"Medium · IX–XVI",   range:[8,16]},
+  {key:"hard",   label:"Hard · XVII–XXIV",  range:[16,24]},
+  {key:"extreme",label:"Extreme · XXV–XXX", range:[24,30]},
+  {key:"legendary",label:"Legendary · XXXI–XLV", range:[30,45]},
+];
+
+const G = {
+  lv:null,scene:null,camera:null,renderer:null,
+  raycaster:null,mouse:new THREE.Vector2(),
+  lMeshes:[],lStates:[],cMeshes:[],hMarkers:[],
+  cHome:[],season:"spring",mechs:{},mechCooldown:{},
+  moves:0,startTime:0,
+  animId:null,t:0,deco:[],
+  bestMoves:{},completed:{},
+  hintStage:0,movesSinceProgress:0,lastProgressMoves:0,
+  activeTier:"easy",
+  fogTarget:null,fogCurrent:null,skyTarget:null,skyCurrent:null,
+  // Cinematic camera director — idle sway, level-intro dolly, and short
+  // focus-pulses toward whatever the player just interacted with.
+  camIntroT0:0,camFocusUntil:0,camFocusPos:null,camShakeUntil:0,
+  atmos:[],
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  BOOK OF WORLDS — World map + progression + save system  (Phase 2)
+// ═══════════════════════════════════════════════════════════════════════════════
+// Each world claims a contiguous slice of LEVELS by id. Worlds 1–2 map onto the
+// 30 handcrafted chapters that already exist. Worlds 3–4 are reserved ranges
+// for Sky Kingdom / Celestial Realm — `developed:false` means "no levels built
+// yet", which the UI shows honestly as a distinct "Coming Soon" seal rather
+// than pretending content exists.
+const WORLDS=[
+  {key:"forest",    name:"Enchanted Forest", sub:"Chapter I",   color:"#7bc96f", range:[0,15],  developed:true},
+  {key:"crystal",   name:"Crystal Caverns",  sub:"Chapter II",  color:"#6ac9e8", range:[15,30], developed:true},
+  {key:"sky",       name:"Sky Kingdom",      sub:"Chapter III", color:"#e8b86a", range:[30,45], developed:false},
+  {key:"celestial", name:"Celestial Realm",  sub:"Chapter IV",  color:"#b08af0", range:[45,60], developed:false},
+];
+function worldForLevel(id){ return WORLDS.find(w=>id>=w.range[0]&&id<w.range[1]); }
+function worldLevels(w){ return LEVELS.slice(w.range[0], Math.min(w.range[1], LEVELS.length)); }
+function isLevelUnlocked(id){ return id===0 || !!G.completed[id-1]; }
+function isWorldUnlocked(w){
+  const idx=WORLDS.indexOf(w);
+  if(idx<=0) return true;
+  const prev=WORLDS[idx-1];
+  if(!prev.developed) return false;
+  return !!G.completed[prev.range[1]-1];
+}
+
+// ── Persistent save (localStorage) ───────────────────────────────────────────
+// Nothing was previously persisted between sessions — completion and best-move
+// data lived only in memory and vanished on refresh. This fixes that.
+const SAVE_KEY="fold_bookofworlds_save_v1";
+function loadSave(){
+  try{
+    const raw=localStorage.getItem(SAVE_KEY);
+    if(!raw)return;
+    const d=JSON.parse(raw);
+    if(d && typeof d==="object"){
+      G.completed=d.completed||{};
+      G.bestMoves=d.bestMoves||{};
+    }
+  }catch(e){ console.warn("[save] load failed, starting fresh:", e); }
+}
+function persistSave(){
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify({completed:G.completed, bestMoves:G.bestMoves, ts:Date.now()}));
+  }catch(e){ console.warn("[save] write failed:", e); }
+}
+loadSave();
+
+// ── Navigation ─────────────────────────────────────────────────────────────────
+function goTitle(){ window.playBookIntro(); }
+function goLevels(){buildTabs(); buildGrid(G.activeTier||"easy"); show("sLevels");}
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("off",s.id!==id));}
+
+// ── Tabs + Grid ────────────────────────────────────────────────────────────────
+function buildTabs(){
+  const tb=document.getElementById("lstabs");
+  tb.innerHTML=TIERS.map(t=>
+    `<button class="ls-tab${t.key===G.activeTier?" on":""}" onclick="selectTier('${t.key}')">${t.label}</button>`
+  ).join("");
+}
+function selectTier(key){
+  G.activeTier=key;
+  document.querySelectorAll(".ls-tab").forEach(b=>b.classList.remove("on"));
+  buildTabs();
+  buildGrid(key);
+}
+function buildGrid(tierKey){
+  const tier=TIERS.find(t=>t.key===tierKey)||TIERS[0];
+  const els=LEVELS.slice(tier.range[0],tier.range[1]);
+  const container=document.getElementById("tierSections");
+  container.innerHTML=`
+    <div class="ls-divider"><span>${tier.label}</span></div>
+    <div class="ls-grid" id="gridActive"></div>`;
+  document.getElementById("gridActive").innerHTML=els.map(lv=>{
+    const ems=lv.creatures.map(c=>CRDB[c.type]?.e||"?").join("");
+    const completed=G.completed[lv.id]?" completed":"";
+    const diffClass=lv.tier==="extreme"?"extreme":lv.tier;
+    return `<div class="lcard${completed}" onclick="enterLevel(${lv.id},this)">
+      <span class="lcard-diff d-${diffClass}">${lv.tier}</span>
+      <div class="lcard-n">${String(lv.id+1).padStart(2,"0")}</div>
+      <div class="lcard-chapter">${lv.chapter}</div>
+      <div class="lcard-name">${lv.name}</div>
+      <div class="lcard-creatures">${ems}</div>
+    </div>`;
+  }).join("");
+}
+
+// ── Start Level ────────────────────────────────────────────────────────────────
+// Cinematic "portal" entry: the tapped card releases an expanding energy
+// ring and the screen flashes, echoing the Orb's own enter-transition — then
+// the level (already fully built by buildScene()) is simply revealed.
+function enterLevel(id,cardEl){
+  // Defense in depth: the UI only attaches click handlers to unlocked
+  // nodes/cards, but guard here too in case enterLevel is ever called
+  // programmatically (e.g. a future deep-link) with a locked id.
+  if(!isLevelUnlocked(id)){ toast("Complete the previous chapter first."); return; }
+  if(cardEl){
+    const r=cardEl.getBoundingClientRect();
+    const cx=r.left+r.width/2, cy=r.top+r.height/2;
+    // staggered multi-ring portal burst instead of a single ring
+    [0,110,220].forEach(delay=>{
+      setTimeout(()=>{
+        const ring=document.createElement("div");
+        ring.className="portal-ring";
+        ring.style.left=cx+"px"; ring.style.top=cy+"px";
+        document.body.appendChild(ring);
+        setTimeout(()=>ring.remove(),700);
+      },delay);
+    });
+  }
+  const flash=document.getElementById("orbFlash");
+  flash.style.transition="opacity .35s ease-out";
+  flash.style.opacity=.85;
+  setTimeout(()=>{
+    startLevel(id);
+    requestAnimationFrame(()=>{ flash.style.transition="opacity .6s ease-in"; flash.style.opacity=0; });
+  },260);
+}
+
+function startLevel(id){
+  const lv=LEVELS[id];
+  G.lv=lv; G.season=lv.startSeason; G.mechs={}; G.mechCooldown={}; G.moves=0;
+  G.cHome=lv.creatures.map(()=>false);
+  G.lMeshes=[]; G.lStates=[]; G.cMeshes=[]; G.hMarkers=[]; G.deco=[];
+  G.startTime=Date.now();
+  G.hintStage=0; G.movesSinceProgress=0; G.lastProgressMoves=0;
+
+  show("sGame");
+  document.getElementById("win").classList.remove("show");
+  document.getElementById("feed").innerHTML="";
+  document.getElementById("mc").textContent="0";
+  document.getElementById("mb").textContent=G.bestMoves[id]||"—";
+  document.getElementById("mp").textContent=lv.par||"—";
+  document.getElementById("movect").classList.remove("over");
+  document.getElementById("hname").textContent=lv.name;
+  document.getElementById("hchap").textContent=lv.chapter;
+  document.getElementById("hhint").textContent="💡 "+lv.hint;
+
+  buildHUD();
+  initGL();
+  buildScene();
+  buildObjectives();
+  openRiddle(lv);
+}
+
+function restartLevel(){if(G.lv)startLevel(G.lv.id);}
+function nextLevel(){
+  const n=G.lv.id+1;
+  const w=worldForLevel(G.lv.id);
+  const worldDone = w && n>=w.range[1];
+
+  if(worldDone || n>=LEVELS.length){
+    // World finished (or we've hit the end of built content): celebrate,
+    // persist, and return to the Book rather than trying to load a level
+    // that doesn't exist yet.
+    persistSave();
+    document.getElementById("win").classList.remove("show");
+    worldCompleteSequence(w);
+    return;
+  }
+  // centered multi-ring burst, echoing the World→Level portal language
+  [0,100,200].forEach(delay=>{
+    setTimeout(()=>{
+      const ring=document.createElement("div");
+      ring.className="portal-ring";
+      ring.style.left=(innerWidth/2)+"px"; ring.style.top=(innerHeight/2)+"px";
+      document.body.appendChild(ring);
+      setTimeout(()=>ring.remove(),700);
+    },delay);
+  });
+  const flash=document.getElementById("orbFlash");
+  flash.style.transition="opacity .3s ease-out"; flash.style.opacity=.85;
+  setTimeout(()=>{
+    startLevel(n);
+    requestAnimationFrame(()=>{flash.style.transition="opacity .6s ease-in"; flash.style.opacity=0;});
+  },220);
+}
+
+// Returns to the current level's world map (used by the in-game "Chapters"
+// button and the win-screen "All Chapters" button) instead of the old flat
+// tier grid, so the player always lands back on the path they came from.
+function backToWorldMap(){
+  const w = G.lv ? worldForLevel(G.lv.id) : WORLDS[0];
+  if(w) enterWorldMap(w.key); else goWorldSelect();
+}
+
+// ── Opening Act: Cinematic Riddle Overlay ───────────────────────────────────────
+let _riddleTimer=null;
+function openRiddle(lv){
+  const el=document.getElementById("riddle");
+  const cap=document.getElementById("rdlCap");
+  const txt=document.getElementById("rdlText");
+  const schema=document.getElementById("rdlSchema");
+  document.getElementById("rdlChapter").textContent=lv.chapter;
+
+  const lines=(lv.riddle||"").split("\n");
+  cap.textContent=lines[0]?.charAt(0)||"F";
+  const rest=(lines[0]?.slice(1)||"")+(lines[1]?("\n"+lines[1]):"");
+
+  schema.innerHTML=`<b>Architectural Breakdown</b>${lv.schema||""}`;
+  el.classList.add("show");
+
+  // Typewriter effect for the poetic riddle
+  txt.innerHTML='<span class="cursor"></span>';
+  let i=0; const full=rest;
+  if(_riddleTimer)clearInterval(_riddleTimer);
+  _riddleTimer=setInterval(()=>{
+    i++;
+    const shown=full.slice(0,i).replace(/\n/g,"<br>");
+    txt.innerHTML=shown+'<span class="cursor"></span>';
+    if(i>=full.length)clearInterval(_riddleTimer);
+  },28);
+
+  toast("📖 "+lv.hint, 6000);
+}
+function dismissRiddle(){
+  document.getElementById("riddle").classList.remove("show");
+  if(_riddleTimer)clearInterval(_riddleTimer);
+}
+
+// ── Hint Engine: Dynamic Visual Echoes ──────────────────────────────────────────
+// Pulses the contour edges of the next objective-relevant layer(s) so the
+// player is nudged without being told the exact answer.
+function requestHint(){
+  if(!G.lv)return;
+  G.hintStage++;
+  const targetLayerId=nextRelevantLayer();
+  if(targetLayerId!=null) pulseLayerEdges(targetLayerId);
+  toast("✦ "+(G.lv.hint), 4000);
+}
+
+function nextRelevantLayer(){
+  // Find the shallowest unfolded layer required by a creature not yet home.
+  if(!G.lv)return null;
+  let best=null;
+  G.lv.creatures.forEach((c,i)=>{
+    if(G.cHome[i])return;
+    for(let d=1;d<=c.homeL;d++){
+      if(!G.lStates[d]?.folded){ if(best===null||d<best)best=d; break; }
+    }
+  });
+  return best;
+}
+
+function pulseLayerEdges(layerId){
+  const m=G.lMeshes[layerId]; if(!m)return;
+  const edges=m.children.find(ch=>ch instanceof THREE.LineSegments);
+  if(!edges)return;
+  edges.userData.pulseUntil=G.t+3.2;
+  edges.userData.pulsing=true;
+}
+
+// Track stuck-state: after several moves with no creature reaching home,
+// gently suggest a hint via a non-intrusive toast (does not auto-open hint).
+function trackStuckState(){
+  G.movesSinceProgress=G.moves-G.lastProgressMoves;
+  if(G.movesSinceProgress===8){
+    toast("✦ Stuck? Try the Hint button above", 3500);
+  }
+}
+
+// ── HUD ─────────────────────────────────────────────────────────────────────────
+function buildHUD(){
+  const lv=G.lv;
+  // Creature badges
+  document.getElementById("crlist").innerHTML=lv.creatures.map((c,i)=>{
+    const cr=CRDB[c.type];
+    return `<div class="crbadge" id="cb${i}">${cr.e} ${cr.n}</div>`;
+  }).join("");
+
+  // Layers + mechanics
+  const cp=document.getElementById("ctrlpanel");
+  cp.innerHTML="";
+  const lrow=document.createElement("div"); lrow.className="ctrl-row";
+  lv.layers.filter(l=>l.fold).forEach(l=>{
+    const b=document.createElement("button");
+    b.className="cbtn"; b.id=`lb${l.id}`;
+    b.textContent=l.n; b.onclick=()=>toggleLayer(l.id);
+    lrow.appendChild(b);
+  });
+  cp.appendChild(lrow);
+
+  if((lv.mechs||[]).length){
+    const mrow=document.createElement("div"); mrow.className="ctrl-row";
+    (lv.mechs||[]).forEach(mk=>{
+      const m=MCHDB[mk]; if(!m)return;
+      const b=document.createElement("button");
+      b.className="cbtn mech"; b.id=`mb${mk}`;
+      b.textContent=`${m.e} ${m.n}`; b.onclick=()=>toggleMech(mk);
+      mrow.appendChild(b);
+    });
+    cp.appendChild(mrow);
+  }
+
+  // Seasons
+  document.getElementById("sbar").innerHTML=(lv.avSeasons||["spring"]).map(s=>{
+    const sd=SZNDB[s];
+    return `<button class="sbtn${s===G.season?" on":""}" id="sb${s}" onclick="setSeason('${s}')">${sd.e} ${sd.n}</button>`;
+  }).join("");
+
+  updateCtrlState();
+}
+
+function updateCtrlState(){
+  G.lv.layers.filter(l=>l.fold).forEach(l=>{
+    const btn=document.getElementById(`lb${l.id}`); if(!btn)return;
+    const locked=(l.deps||[]).some(d=>!G.lStates[d]?.folded);
+    btn.classList.toggle("on",!!G.lStates[l.id]?.folded);
+    btn.classList.toggle("locked",locked);
+  });
+  (G.lv.mechs||[]).forEach(mk=>{
+    const btn=document.getElementById(`mb${mk}`); if(!btn)return;
+    const cdUntil=G.mechCooldown[mk]||0;
+    const remaining=Math.max(0,Math.ceil(cdUntil-G.t));
+    btn.classList.toggle("cooldown",remaining>0);
+    if(remaining>0)btn.setAttribute("data-cd",remaining+"s"); else btn.removeAttribute("data-cd");
+  });
+}
+
+function buildObjectives(){
+  const ol=document.getElementById("objlist");
+  ol.innerHTML=(G.lv.objectives||[]).map((o,i)=>
+    `<div class="obj-item" id="obj${i}"><div class="obj-dot"></div>${o}</div>`
+  ).join("");
+}
+
+function tickObjective(i){
+  const el=document.getElementById(`obj${i}`);
+  if(el) el.classList.add("done");
+}
+
+// ── Season ─────────────────────────────────────────────────────────────────────
+function setSeason(s){
+  G.season=s;
+  applySeason(s);
+  document.querySelectorAll(".sbtn").forEach(b=>b.classList.remove("on"));
+  const sb=document.getElementById(`sb${s}`); if(sb)sb.classList.add("on");
+  fireChain(`season:${s}`);
+  checkLogic(); countMove();
+}
+
+function applySeason(s){
+  if(!G.scene)return;
+  const sd=SZNDB[s]||SZNDB.spring;
+  // Smooth ambient transition targets — actual interpolation happens in loop()
+  G.skyTarget=new THREE.Color(sd.sky);
+  G.fogTarget=new THREE.Color(sd.fog);
+  if(!G.skyCurrent){G.skyCurrent=G.skyTarget.clone(); G.scene.background=G.skyCurrent;}
+  if(!G.fogCurrent){G.fogCurrent=G.fogTarget.clone();}
+
+  // Fog density/style scales with difficulty for atmosphere — extreme/hard
+  // chapters use FogExp2 for a denser, more cinematic depth falloff.
+  const heavy=G.lv && (G.lv.tier==="hard"||G.lv.tier==="extreme");
+  if(heavy){
+    if(!(G.scene.fog instanceof THREE.FogExp2)) G.scene.fog=new THREE.FogExp2(sd.fog,0.045);
+  }else{
+    if(!(G.scene.fog instanceof THREE.Fog)) G.scene.fog=new THREE.Fog(sd.fog,12,26);
+  }
+
+  if(G.lMeshes[1])G.lMeshes[1].material.color.setHex(sd.gnd);
+
+  // Stars / clouds
+  G.deco.forEach(d=>{
+    const u=d.userData;
+    if(u.star)d.visible=s==="night"||s==="storm";
+    if(u.cloud){d.visible=s!=="night";d.material.color.setHex(s==="storm"?0x707888:0xffffff);}
+    if(u.flower)d.visible=s==="spring"||s==="summer";
+    if(u.firefly)d.visible=s==="night"||s==="dusk";
+  });
+
+  // Adjust lighting (target values consumed smoothly in loop())
+  G.scene.children.forEach(c=>{
+    if(c instanceof THREE.DirectionalLight&&c.userData.sun){
+      let col=0xffe8a0,intensity=1.4;
+      if(s==="night"){col=0x3050a0;intensity=.3;}
+      else if(s==="dusk"){col=0xff8030;intensity=.9;}
+      else if(s==="storm"){col=0x8090a0;intensity=.6;}
+      c.userData.targetColor=col; c.userData.targetIntensity=intensity;
+    }
+  });
+}
+
+// ── Mechanics (with cooldown gates) ─────────────────────────────────────────────
+function toggleMech(mk){
+  const cdUntil=G.mechCooldown[mk]||0;
+  if(G.t<cdUntil){
+    toast(`⏳ ${MCHDB[mk].n} is still resting — ${Math.ceil(cdUntil-G.t)}s`, 2000);
+    return;
+  }
+  const wasOn=!!G.mechs[mk];
+  G.mechs[mk]=!wasOn;
+  const btn=document.getElementById(`mb${mk}`); if(btn)btn.classList.toggle("on",G.mechs[mk]);
+  fireChain(`mech:${mk}`);
+  checkLogic(); countMove();
+  const md=MCHDB[mk];
+  toast(`${md.e} ${md.n} ${G.mechs[mk]?"activated":"deactivated"}`, 2000);
+  if(G.mechs[mk]){
+    if(mk==="rain")rainFx();
+    if(mk==="moonbeam")moonFx();
+    if(mk==="firepath"){fireFx(); G.camShakeUntil=G.t+.35;}
+    cameraFocus(new THREE.Vector3(0,0,0));
+  } else if(COOLDOWN_MECHS[mk]){
+    G.mechCooldown[mk]=G.t+COOLDOWN_MECHS[mk];
+  }
+}
+
+// ── Layer Fold ─────────────────────────────────────────────────────────────────
+function toggleLayer(id){
+  const l=G.lv.layers[id];
+  const locked=(l.deps||[]).some(d=>!G.lStates[d]?.folded);
+  if(locked){
+    const dn=G.lv.layers[l.deps[0]]?.n||"previous";
+    toast(`⚠️ Fold "${dn}" first!`, 2500); return;
+  }
+  const st=G.lStates[id];
+  st.folded=!st.folded; st.targetAngle=st.folded?1:0;
+  countMove();
+  fireChain(`layer:${id}`);
+  updateCtrlState(); checkLogic();
+  sparkAt(G.lMeshes[id]?.position);
+  cameraFocus(G.lMeshes[id]?.position);
+  toast(st.folded?`${l.n} folded ↑`:`${l.n} unfolded ↓`, 1200);
+}
+
+// ── Creature Logic ─────────────────────────────────────────────────────────────
+function checkLogic(){
+  G.lv.creatures.forEach((c,i)=>{
+    if(G.cHome[i])return;
+    if(layersAccessible(c.homeL) && typeCanMove(c.type, c.homeL)) sendHome(i);
+  });
+}
+
+function layersAccessible(homeL){
+  for(let i=1;i<homeL;i++) if(!G.lStates[i]?.folded)return false;
+  return true;
+}
+
+// ── Creature Rules Registry ──────────────────────────────────────────────────
+// Pluggable movement-rule system: each creature type maps to a pure function
+// (season, mechs, homeL) => boolean. Adding a new creature never requires
+// touching this file's control flow — just register a rule here and a
+// visual in CRDB/buildCreatureMesh. Original 15 creatures' logic preserved
+// byte-for-byte from the previous switch statement.
+const CREATURE_RULES = {
+  turtle:    (s,m,homeL)=> s!=="night" && s!=="storm",
+  rabbit:    (s,m,homeL)=> homeL<=2||(m.vines?false:true)||(s==="spring"||s==="autumn"),
+  bird:      (s,m,homeL)=> (s==="autumn"||s==="spring"||(m.wind&&s!=="storm"))||(s==="storm"&&m.wind),
+  fox:       (s,m,homeL)=> s==="night"||s==="dusk"||m.torch,
+  fish:      (s,m,homeL)=> (s==="spring"||s==="winter"||s==="storm")&&(m.rain||m.tide||homeL<=2)&&!m.firepath,
+  bear:      (s,m,homeL)=> m.stonedoor,
+  owl:       (s,m,homeL)=> (s==="night"||s==="dusk")&&(m.moonbeam||m.torch),
+  deer:      (s,m,homeL)=> (s==="spring"||s==="autumn")||m.vines,
+  frog:      (s,m,homeL)=> m.rain&&(m.lilypad||homeL<=2),
+  wolf:      (s,m,homeL)=> s==="night"||s==="winter"||(s==="dusk"&&m.moonbeam),
+  butterfly: (s,m,homeL)=> s==="spring"&&(m.wind||homeL<=1),
+  dragon:    (s,m,homeL)=> m.stonedoor||(m.moonbeam&&(s==="night"||m.torch)),
+  panda:     (s,m,homeL)=> m.bamboo,
+  elephant:  (s,m,homeL)=> m.pressure&&(s==="summer"||s==="spring"||s==="autumn"),
+  phoenix:   (s,m,homeL)=> m.firepath||(s==="summer"&&m.torch),
+  // ── New creatures (Chapter XXXI onward) ──
+  cat:       (s,m,homeL)=> !!m.portal,
+  bat:       (s,m,homeL)=> s==="night" && !!m.gravityflip,
+};
+
+function typeCanMove(type, homeL){
+  const s=G.season, m=G.mechs;
+  const rule=CREATURE_RULES[type];
+  return rule ? rule(s,m,homeL) : true;
+}
+
+function sendHome(i){
+  G.cHome[i]=true;
+  const cb=document.getElementById(`cb${i}`); if(cb)cb.classList.add("home");
+  const c=G.lv.creatures[i]; const cr=CRDB[c.type];
+  feed(`${cr.e} ${cr.n} found home! ✦`);
+  animCreature(i);
+  sparkAt(G.hMarkers[i]?.position);
+  G.lastProgressMoves=G.moves;
+  // Tick objective
+  const doneCount=G.cHome.filter(Boolean).length;
+  if(doneCount>0)tickObjective(Math.min(doneCount-1, (G.lv.objectives||[]).length-1));
+  checkWin();
+}
+
+function animCreature(i){
+  const m=G.cMeshes[i], h=G.hMarkers[i]; if(!m||!h)return;
+  const s=m.position.clone(), t=h.position.clone();
+  // Catmull-Rom spline arc for flyers (bird/owl/butterfly/phoenix/dragon);
+  // weighted micro-stumble path for heavy creatures (elephant/bear/panda).
+  const cr=CRDB[G.lv.creatures[i].type];
+  const isFlyer=cr.weight==="flyer";
+  const isHeavy=cr.weight==="heavy";
+
+  let curve=null;
+  if(isFlyer){
+    const apex=s.clone().lerp(t,.5); apex.y+=2.2+Math.random()*.6;
+    const lift=s.clone().lerp(t,.18); lift.y+=1.1;
+    const drop=s.clone().lerp(t,.82); drop.y+=1.5;
+    curve=new THREE.CatmullRomCurve3([s,lift,apex,drop,t]);
+  }
+
+  let f=0; const dur=isHeavy?100:80;
+  const stumblePhases=isHeavy?[.3,.62,.85]:[];
+  const step=()=>{
+    f++; const p=f/dur;
+    const e=p<.5?2*p*p:-1+(4-2*p)*p;
+    if(curve){
+      const pos=curve.getPoint(Math.min(e,1));
+      m.position.copy(pos);
+    }else{
+      m.position.lerpVectors(s,t,e);
+      m.position.y+=Math.sin(p*Math.PI)*(isHeavy?.55:1.4);
+      if(isHeavy){
+        // Weighted micro-stumble: small jolt-pauses at set phases of the walk
+        const nearStumble=stumblePhases.some(sp=>Math.abs(p-sp)<.035);
+        if(nearStumble) m.position.y-=.06*Math.sin((p%0.035)/0.035*Math.PI);
+        m.rotation.z=Math.sin(p*Math.PI*6)*.05;
+      }
+    }
+    m.rotation.y+=isHeavy?.06:.12;
+    if(f<dur)requestAnimationFrame(step);
+    else{m.position.copy(t);let sp=0;const spin=()=>{sp++;m.rotation.y+=.18;if(sp<25)requestAnimationFrame(spin);};spin();}
+  }; step();
+}
+
+// ── Win ────────────────────────────────────────────────────────────────────────
+function checkWin(){
+  if(!G.cHome.every(Boolean))return;
+  setTimeout(()=>{
+    const elapsed=Math.round((Date.now()-G.startTime)/1000);
+    const par=G.lv.par||10;
+    const stars=G.moves<=par?"⭐⭐⭐":G.moves<=par*1.5?"⭐⭐":"⭐";
+    const best=G.bestMoves[G.lv.id];
+    if(!best||G.moves<best)G.bestMoves[G.lv.id]=G.moves;
+    G.completed[G.lv.id]=true;
+    persistSave();
+
+    document.getElementById("win").classList.add("show");
+    document.getElementById("wstars").textContent=stars;
+    document.getElementById("wsub").textContent=`${G.lv.name} — all creatures safe`;
+    document.getElementById("wmoves").textContent=G.moves;
+    document.getElementById("wtime").textContent=elapsed+"s";
+    document.getElementById("mb").textContent=G.bestMoves[G.lv.id];
+    const nb=document.getElementById("wnext");
+    const w=worldForLevel(G.lv.id);
+    const worldDone = w && (G.lv.id+1>=w.range[1]);
+    if(worldDone){
+      const nextW=WORLDS[WORLDS.indexOf(w)+1];
+      nb.textContent = (nextW && nextW.developed) ? `${w.name} Complete — Continue →` : `${w.name} Complete ✦`;
+      nb.style.display="";
+    } else if(G.lv.id+1<LEVELS.length){
+      nb.textContent=`Next: ${LEVELS[G.lv.id+1].name} →`;nb.style.display="";
+    } else nb.style.display="none";
+    confetti();
+  },1300);
+}
+
+// ── Chain Events ───────────────────────────────────────────────────────────────
+function fireChain(t){
+  if(!G.lv)return;
+  G.lv.chains?.forEach((ch,i)=>{if(ch.t===t)setTimeout(()=>feed(ch.m),i*700);});
+}
+function feed(msg){
+  const f=document.getElementById("feed");
+  const d=document.createElement("div"); d.className="fitem"; d.textContent=msg;
+  f.appendChild(d);
+  setTimeout(()=>{d.classList.add("fade");setTimeout(()=>d.remove(),600);},4000);
+  while(f.children.length>5)f.removeChild(f.firstChild);
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────────
+let _tt=null;
+function toast(msg,dur=2500){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.classList.remove("off");
+  if(_tt)clearTimeout(_tt); _tt=setTimeout(()=>t.classList.add("off"),dur);
+}
+
+// ── Move counter ───────────────────────────────────────────────────────────────
+function countMove(){
+  G.moves++;document.getElementById("mc").textContent=G.moves;
+  const mv=document.getElementById("movect");
+  mv.classList.toggle("over", G.lv && G.moves>(G.lv.par||999));
+  trackStuckState();
+}
+
+// ── Three.js Init ──────────────────────────────────────────────────────────────
+// Every startLevel() call replaces G.scene with a brand new THREE.Scene,
+// but the old scene's geometries/materials/textures were never explicitly
+// disposed — Three.js doesn't free GPU memory just because JS garbage
+// collects the object references. Over a long session (many level loads)
+// this silently grows GPU memory usage. Call before discarding a scene.
+function disposeScene(scene){
+  if(!scene) return;
+  scene.traverse(obj=>{
+    if(obj.geometry) obj.geometry.dispose();
+    if(obj.material){
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      mats.forEach(m=>{
+        for(const key in m){
+          if(m[key] && m[key].isTexture) m[key].dispose();
+        }
+        m.dispose();
+      });
+    }
+  });
+}
+
+let _glListenersBound = false;
+function initGL(){
+  if(G.animId)cancelAnimationFrame(G.animId);
+  disposeScene(G.scene);
+  const cv=document.getElementById("gc");
+  // Reuse a single WebGLRenderer for the lifetime of the app. Recreating one
+  // on every startLevel() call was leaking a full GL context per level —
+  // browsers cap concurrent WebGL contexts (commonly 8–16), so a long play
+  // session (30+ level loads) could silently start failing to render.
+  if(!G.renderer){
+    G.renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+  }
+  G.renderer.setSize(innerWidth,innerHeight);
+  G.renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  G.renderer.shadowMap.enabled=true;
+  G.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  G.renderer.toneMapping=THREE.ACESFilmicToneMapping;
+  G.renderer.toneMappingExposure=1.15;
+
+  G.scene=new THREE.Scene();
+  G.skyCurrent=null; G.fogCurrent=null; G.skyTarget=null; G.fogTarget=null;
+  applySeason(G.season);
+
+  G.camera=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.1,100);
+  G.camera.position.set(0,5.5+3.2,11+5.5); // pulled-back start pose for the intro dolly
+  G.camera.lookAt(0,-.8,0);
+  G.camIntroT0=G.t; G.camFocusPos=null; G.camFocusUntil=0; G.camShakeUntil=0;
+
+  // Cinematic Lighting — fine-tuned dynamic shadow maps with higher
+  // resolution + tighter bias for Hard/Extreme chapters to sell depth.
+  const heavy=G.lv && (G.lv.tier==="hard"||G.lv.tier==="extreme");
+  const amb=new THREE.AmbientLight(0xfff0d0,heavy?.55:.7); G.scene.add(amb);
+  const sun=new THREE.DirectionalLight(0xffe8a0,1.4);
+  sun.position.set(6,12,7); sun.castShadow=true;
+  const shadowRes=heavy?2048:1536;
+  sun.shadow.mapSize.set(shadowRes,shadowRes);
+  sun.shadow.camera.left=-12; sun.shadow.camera.right=12;
+  sun.shadow.camera.top=12; sun.shadow.camera.bottom=-12;
+  sun.shadow.camera.near=.5; sun.shadow.camera.far=40;
+  sun.shadow.bias=-.0012; sun.shadow.radius=heavy?2.4:1.4;
+  sun.userData={sun:true,targetColor:0xffe8a0,targetIntensity:1.4};
+  G.scene.add(sun);
+  const fill=new THREE.DirectionalLight(0xa0c0ff,.3);
+  fill.position.set(-6,4,-5); G.scene.add(fill);
+  const rim=new THREE.DirectionalLight(0xffd090,.15);
+  rim.position.set(0,3,-10); G.scene.add(rim);
+
+  G.raycaster=new THREE.Raycaster();
+  // These only need binding once — attaching them on every level load
+  // stacked a fresh duplicate listener each time (click handlers firing
+  // N times after N level loads, same for resize).
+  if(!_glListenersBound){
+    cv.addEventListener("click",onClick);
+    window.addEventListener("resize",onResize);
+    _glListenersBound = true;
+  }
+  loop();
+}
+
+// ── Scene Build ────────────────────────────────────────────────────────────────
+function buildScene(){
+  while(G.scene.children.length>4)G.scene.remove(G.scene.children[G.scene.children.length-1]);
+  G.lMeshes=[]; G.lStates=[]; G.cMeshes=[]; G.hMarkers=[]; G.deco=[];
+
+  // Shadow floor
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(22,22),new THREE.MeshLambertMaterial({color:0x0a0806}));
+  floor.rotation.x=-Math.PI/2; floor.position.y=-2.8; floor.receiveShadow=true; G.scene.add(floor);
+
+  G.lv.layers.forEach(l=>{
+    G.lStates[l.id]={folded:false,angle:0,targetAngle:0,vel:0};
+    buildLayerMesh(l);
+  });
+
+  G.lv.creatures.forEach((c,i)=>{
+    const m=buildCreatureMesh(c.type);
+    m.position.set(c.sx, G.lv.layers[0].y+.45, c.sz);
+    m.userData={ci:i,type:c.type};
+    G.scene.add(m); G.cMeshes.push(m);
+
+    const hm=buildHomeMark(i,c.type);
+    const hl=G.lv.layers[c.homeL]||G.lv.layers[0];
+    hm.position.set(c.homeX, hl.y+.6, c.homeZ);
+    G.scene.add(hm); G.hMarkers.push(hm);
+  });
+
+  buildDeco();
+  initAtmosphere();
+}
+
+// ── Premium Paper Material ──────────────────────────────────────────────────────
+// Emulates soft-folded origami cardstock / textured parchment by perturbing
+// vertex normals with a cheap analytic "fiber grain" via onBeforeCompile —
+// stays within MeshLambertMaterial's lighting model (cheap, broad device
+// support) while adding believable micro-relief and a faint paper-fiber rim.
+function makePaperMaterial(colorHex, opts={}){
+  const mat=new THREE.MeshLambertMaterial({
+    color:colorHex, side:THREE.DoubleSide,
+    transparent:!!opts.transparent, opacity:opts.opacity??1,
+  });
+  mat.onBeforeCompile=(shader)=>{
+    shader.uniforms.uGrain={value:opts.grain??0.035};
+    shader.vertexShader=shader.vertexShader
+      .replace('#include <common>',`#include <common>
+        uniform float uGrain;
+        attribute float fiberSeed;`)
+      .replace('#include <begin_vertex>',`#include <begin_vertex>
+        float fib = sin(position.x*37.0+position.z*19.0)*0.5+0.5;
+        transformed.y += (fib-0.5)*uGrain;`);
+  };
+  return mat;
+}
+
+// Iridescent crystalline material for deep-layer gems — a Phong base with a
+// view-dependent tint shift faked via vertex-color-like hue cycling.
+function makeCrystalMaterial(colorHex){
+  const mat=new THREE.MeshPhongMaterial({
+    color:colorHex, transparent:true, opacity:.82,
+    shininess:90, specular:0xffffff, side:THREE.DoubleSide,
+  });
+  return mat;
+}
+
+function buildLayerMesh(l){
+  const geo=new THREE.BoxGeometry(l.w,0.12,l.d,Math.max(2,Math.round(l.w)),1,Math.max(2,Math.round(l.d)));
+  const mat=makePaperMaterial(l.c);
+  const m=new THREE.Mesh(geo,mat);
+  m.position.set(0,l.y,0); m.receiveShadow=true; m.castShadow=true;
+  m.userData={layerId:l.id,foldable:l.fold,origY:l.y};
+  // Edge lines — used both as decoration and as the Dynamic Visual Echo
+  // hint target (pulsed brighter/thicker when requestHint() targets this layer)
+  const em=new THREE.LineBasicMaterial({color:0xf3dc8a,opacity:.07,transparent:true});
+  const edges=new THREE.LineSegments(new THREE.EdgesGeometry(geo),em);
+  edges.userData={baseOpacity:.07,pulsing:false,pulseUntil:0};
+  m.add(edges);
+  G.scene.add(m); G.lMeshes[l.id]=m;
+
+  // Per-layer decorations embedded in the layer
+  addLayerDeco(l,m);
+}
+
+function addLayerDeco(l,parent){
+  const rnd=(a,b)=>a+(b-a)*Math.random();
+
+  if(l.id===0){
+    // Clouds
+    for(let i=0;i<5;i++){
+      const cg=new THREE.SphereGeometry(.5+rnd(0,.4),7,5);
+      const cm=new THREE.MeshLambertMaterial({color:0xffffff,opacity:.84,transparent:true});
+      const c=new THREE.Mesh(cg,cm);
+      c.position.set(-4+i*2+rnd(-.3,.3), l.y+rnd(.8,1.4), -2+rnd(-.4,.4));
+      c.scale.set(1+rnd(0,.5),.4,.7+rnd(0,.3));
+      c.userData={cloud:true,baseY:c.position.y,spd:rnd(.1,.2),t0:rnd(0,Math.PI*2)};
+      G.scene.add(c); G.deco.push(c);
+    }
+    // Stars
+    for(let i=0;i<40;i++){
+      const s=new THREE.Mesh(new THREE.SphereGeometry(.025,4,4),new THREE.MeshBasicMaterial({color:0xffffc8}));
+      s.position.set(rnd(-6,6),l.y+rnd(1.5,4),rnd(-3,1));
+      s.userData={star:true,t0:rnd(0,Math.PI*2)};
+      s.visible=false; G.scene.add(s); G.deco.push(s);
+    }
+  }
+
+  if(l.id===1){
+    // Trees
+    const treeCols=[0x2a6010,0x3a7020,0x4a8030,0x207010];
+    for(let i=0;i<8;i++){
+      const g=new THREE.Group();
+      const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.05,.09,.5,6),new THREE.MeshLambertMaterial({color:0x5a3010}));
+      trunk.castShadow=true;
+      const top=new THREE.Mesh(new THREE.ConeGeometry(.28,.7,7),new THREE.MeshLambertMaterial({color:treeCols[i%4]}));
+      top.position.y=.55; top.castShadow=true;
+      g.add(trunk); g.add(top);
+      g.position.set(rnd(-3.5,3.5),l.y+.32,rnd(-1.8,-.2));
+      g.userData={tree:true,t0:rnd(0,Math.PI*2),sway:.7+rnd(0,.5)};
+      G.scene.add(g); G.deco.push(g);
+    }
+    // Flowers
+    const flcols=[0xff88aa,0xffcc44,0xcc88ff,0x88ffcc,0xffaa66];
+    for(let i=0;i<12;i++){
+      const f=new THREE.Mesh(new THREE.SphereGeometry(.065,5,5),new THREE.MeshLambertMaterial({color:flcols[i%5]}));
+      f.position.set(rnd(-3,3),l.y+.14,rnd(-1.4,.4));
+      f.userData={flower:true,t0:rnd(0,Math.PI*2)}; f.visible=false;
+      G.scene.add(f); G.deco.push(f);
+    }
+    // Grass — thin wind-swayed blades. Cheap: a handful of double-sided
+    // planes pivoted at the base, rocking with a per-blade phase offset so
+    // the patch reads as a continuous wave rather than uniform metronoming.
+    const grassCols=[0x3a7a2a,0x4a8a34,0x2e6a22];
+    for(let i=0;i<26;i++){
+      const hinge=new THREE.Group();
+      const blade=new THREE.Mesh(
+        new THREE.PlaneGeometry(.05,.22),
+        new THREE.MeshLambertMaterial({color:grassCols[i%3],side:THREE.DoubleSide})
+      );
+      blade.position.y=.11; // pivot at base
+      hinge.add(blade);
+      hinge.position.set(rnd(-3.6,3.6),l.y+.06,rnd(-1.9,.5));
+      hinge.rotation.y=rnd(0,Math.PI*2);
+      hinge.userData={grass:true,t0:rnd(0,Math.PI*2),sway:.5+rnd(0,.6)};
+      G.scene.add(hinge); G.deco.push(hinge);
+    }
+  }
+
+  // Crystals on deep layers — now using the iridescent crystalline material
+  if(l.id>=2){
+    const ccols=[0x7060c0,0x50a0e0,0xe06090,0x60c0a0,0xe0a030,0xa060e0];
+    const cnt=2+l.id;
+    for(let i=0;i<cnt;i++){
+      const cg=new THREE.CylinderGeometry(0,.1+rnd(0,.06),.4+rnd(0,.3),4);
+      const cm=makeCrystalMaterial(ccols[i%ccols.length]);
+      const cr=new THREE.Mesh(cg,cm);
+      cr.position.set(rnd(-2.5,2.5),l.y+.3,rnd(-1.5,.3));
+      cr.userData={crystal:true,t0:rnd(0,Math.PI*2),baseHue:i/ccols.length};
+      G.scene.add(cr); G.deco.push(cr);
+    }
+    // Rocks — gentle floating bob + slow tumble so nothing on a crystal
+    // layer sits perfectly still.
+    for(let i=0;i<4;i++){
+      const rg=new THREE.DodecahedronGeometry(.12+rnd(0,.08),0);
+      const rm=new THREE.MeshLambertMaterial({color:[0x7a6858,0x8a7868,0x6a5848][i%3]});
+      const rock=new THREE.Mesh(rg,rm);
+      rock.position.set(rnd(-2.5,2.5),l.y+.14,rnd(-1.5,.3));
+      rock.rotation.set(rnd(0,Math.PI),rnd(0,Math.PI),rnd(0,Math.PI));
+      rock.castShadow=true;
+      rock.userData={rock:true,t0:rnd(0,Math.PI*2),baseY:rock.position.y};
+      G.scene.add(rock); G.deco.push(rock);
+    }
+  }
+}
+
+function buildDeco(){
+  // Fireflies
+  for(let i=0;i<20;i++){
+    const rnd=(a,b)=>a+(b-a)*Math.random();
+    const f=new THREE.Mesh(new THREE.SphereGeometry(.028,4,4),new THREE.MeshBasicMaterial({color:0xbbff88}));
+    f.position.set(rnd(-5,5),rnd(.2,2.5),rnd(-2.5,1));
+    f.userData={firefly:true,t0:rnd(0,Math.PI*2),bx:f.position.x,bz:f.position.z};
+    f.visible=false; G.scene.add(f); G.deco.push(f);
+  }
+}
+
+// ── Creature Builder ───────────────────────────────────────────────────────────
+function buildCreatureMesh(type){
+  const cr=CRDB[type]||CRDB.turtle;
+  const g=new THREE.Group();
+  const sz=cr.sz;
+
+  // Body
+  const body=new THREE.Mesh(new THREE.BoxGeometry(sz*2.4,sz*.95,sz*2),new THREE.MeshLambertMaterial({color:cr.body}));
+  body.castShadow=true; g.add(body);
+
+  // Head
+  const head=new THREE.Mesh(new THREE.BoxGeometry(sz*.95,sz*.95,sz*1.05),new THREE.MeshLambertMaterial({color:cr.head}));
+  head.position.set(sz*1.1,sz*.05,0); head.castShadow=true; g.add(head);
+
+  // Eyes
+  const eyeM=new THREE.MeshBasicMaterial({color:0x0a0a0a});
+  const eyeG=new THREE.SphereGeometry(.018,5,5);
+  [-.065,.065].forEach(z=>{const e=new THREE.Mesh(eyeG,eyeM); e.position.set(sz*1.52,sz*.28,z); g.add(e);});
+
+  // Type-specific features
+  switch(type){
+    case "turtle":
+      const shell=new THREE.Mesh(new THREE.SphereGeometry(sz*.9,8,6),new THREE.MeshLambertMaterial({color:0x1a4a0a}));
+      shell.scale.set(1,.55,1); shell.position.set(0,sz*.52,0); g.add(shell);
+      break;
+    case "rabbit":
+      [-1,1].forEach(s=>{const e=new THREE.Mesh(new THREE.BoxGeometry(sz*.17,sz*.85,sz*.14),new THREE.MeshLambertMaterial({color:cr.body})); e.position.set(s*sz*.28,sz*.95,sz*.32); g.add(e);});
+      break;
+    case "bird": case "owl": case "phoenix": case "dragon":
+      const wc=type==="dragon"?0x4010a0:type==="phoenix"?0xff4010:type==="owl"?0xa08050:cr.body;
+      [-1,1].forEach(s=>{const w=new THREE.Mesh(new THREE.BoxGeometry(sz*.08,sz*.5,sz*1.3),new THREE.MeshLambertMaterial({color:wc,opacity:.9,transparent:true})); w.position.set(s*sz*1.2,sz*.25,0); w.rotation.z=s*.38; w.userData={wing:true,side:s,t0:Math.random()*Math.PI*2}; g.add(w);});
+      if(type==="dragon"){for(let i=0;i<3;i++){const sp=new THREE.Mesh(new THREE.ConeGeometry(.04,.18,4),new THREE.MeshLambertMaterial({color:0x5020a0})); sp.position.set(-sz*(.9+i*.35),sz*.42,0); sp.rotation.z=Math.PI*.65; g.add(sp);}}
+      if(type==="phoenix"){body.material.color.setHex(0xff5010);}
+      break;
+    case "fox":
+      const tail=new THREE.Mesh(new THREE.ConeGeometry(sz*.32,sz*1.3,6),new THREE.MeshLambertMaterial({color:0xf8f8f8})); tail.rotation.z=-.75; tail.position.set(-sz*1.25,sz*.25,0); g.add(tail);
+      break;
+    case "deer":
+      [-1,1].forEach(s=>{const a=new THREE.Mesh(new THREE.CylinderGeometry(.025,.015,.42,4),new THREE.MeshLambertMaterial({color:0x7a5028})); a.position.set(s*sz*.32,sz*.92,sz*.22); a.rotation.z=s*.28; g.add(a);});
+      break;
+    case "bear": case "panda":
+      body.scale.setScalar(1.35);
+      const bc=type==="panda"?0x0a0a0a:cr.body;
+      [-1,1].forEach(s=>{const e=new THREE.Mesh(new THREE.SphereGeometry(sz*.24,5,5),new THREE.MeshLambertMaterial({color:bc})); e.position.set(s*sz*.52,sz*1.05,sz*.32); g.add(e);});
+      break;
+    case "wolf":
+      [-1,1].forEach(s=>{const e=new THREE.Mesh(new THREE.ConeGeometry(.065,.22,4),new THREE.MeshLambertMaterial({color:cr.body})); e.position.set(s*sz*.44,sz*1.02,sz*.36); g.add(e);});
+      break;
+    case "elephant":
+      body.scale.setScalar(1.5);
+      const trunk_e=new THREE.Mesh(new THREE.CylinderGeometry(.06,.04,.45,6),new THREE.MeshLambertMaterial({color:cr.body}));
+      trunk_e.position.set(sz*1.55,-sz*.15,0); trunk_e.rotation.z=Math.PI/3; g.add(trunk_e);
+      break;
+    case "frog":
+      [-.2,.2].forEach(z=>{const ey=new THREE.Mesh(new THREE.SphereGeometry(.085,7,7),new THREE.MeshLambertMaterial({color:cr.body})); ey.position.set(sz*.82,sz*.62,z); const ep=new THREE.Mesh(new THREE.SphereGeometry(.048,5,5),new THREE.MeshBasicMaterial({color:0x080808})); ep.position.x=.02; ey.add(ep); g.add(ey);});
+      break;
+    case "butterfly":
+      const bwcols=[0xe070b0,0xff88cc,0xd050a0,0xffa0d0];
+      [-1,1].forEach((s,si)=>{const bw=new THREE.Mesh(new THREE.PlaneGeometry(sz*1.4,sz*1.1),new THREE.MeshLambertMaterial({color:bwcols[si*2],opacity:.9,transparent:true,side:THREE.DoubleSide})); bw.position.set(s*sz*.8,sz*.4,0); bw.rotation.y=s*.5; bw.userData={wing:true,side:s,t0:Math.random()*Math.PI*2}; g.add(bw);});
+      break;
+    case "cat":
+      const ctail=new THREE.Mesh(new THREE.CylinderGeometry(.03,.02,sz*1.6,5),new THREE.MeshLambertMaterial({color:cr.body}));
+      ctail.rotation.z=-1.1; ctail.position.set(-sz*1.15,sz*.35,0); g.add(ctail);
+      [-1,1].forEach(s=>{const ce=new THREE.Mesh(new THREE.ConeGeometry(sz*.16,sz*.32,4),new THREE.MeshLambertMaterial({color:cr.head})); ce.position.set(sz*1.02,sz*.62,s*sz*.32); ce.rotation.x=s*.15; g.add(ce);});
+      break;
+    case "bat":
+      [-1,1].forEach(s=>{const bwg=new THREE.Shape(); bwg.moveTo(0,0); bwg.lineTo(sz*1.5,sz*.15); bwg.lineTo(sz*1.3,-sz*.5); bwg.lineTo(sz*.6,-sz*.35); bwg.lineTo(0,0);
+        const bwm=new THREE.Mesh(new THREE.ShapeGeometry(bwg),new THREE.MeshLambertMaterial({color:0x1a0e28,opacity:.92,transparent:true,side:THREE.DoubleSide}));
+        bwm.position.set(s*sz*.55,sz*.15,0); bwm.rotation.y=s>0?0:Math.PI; bwm.scale.x=s;
+        bwm.userData={wing:true,side:s,t0:Math.random()*Math.PI*2}; g.add(bwm);});
+      [-1,1].forEach(s=>{const be=new THREE.Mesh(new THREE.ConeGeometry(sz*.1,sz*.24,4),new THREE.MeshLambertMaterial({color:cr.head})); be.position.set(sz*.95,sz*.55,s*sz*.22); g.add(be);});
+      break;
+  }
+  return g;
+}
+
+// ── Home Marker ────────────────────────────────────────────────────────────────
+function buildHomeMark(i,type){
+  const g=new THREE.Group();
+  const cols=[0xffd700,0x88ff88,0x88ccff,0xff88cc,0xffcc66,0xcc88ff,0x88ffcc,0xffaa44];
+  const c=cols[i%cols.length];
+  const star=new THREE.Mesh(new THREE.OctahedronGeometry(.16,0),new THREE.MeshBasicMaterial({color:c}));
+  star.rotation.x=Math.PI/4; g.add(star);
+  const ring=new THREE.Mesh(new THREE.RingGeometry(.2,.28,20),new THREE.MeshBasicMaterial({color:c,opacity:.28,transparent:true,side:THREE.DoubleSide}));
+  ring.rotation.x=-Math.PI/2; g.add(ring);
+  const glow=new THREE.Mesh(new THREE.SphereGeometry(.25,8,8),new THREE.MeshBasicMaterial({color:c,opacity:.07,transparent:true}));
+  g.add(glow);
+  g.userData={baseColor:c,t0:Math.random()*Math.PI*2};
+  return g;
+}
+
+// ── Click Handler ──────────────────────────────────────────────────────────────
+function onClick(e){
+  const cv=document.getElementById("gc");
+  const r=cv.getBoundingClientRect();
+  G.mouse.x=((e.clientX-r.left)/r.width)*2-1;
+  G.mouse.y=-((e.clientY-r.top)/r.height)*2+1;
+  G.raycaster.setFromCamera(G.mouse,G.camera);
+  const hits=G.raycaster.intersectObjects(G.lMeshes.filter(Boolean),false);
+  if(hits.length){const h=hits[0];const {layerId,foldable}=h.object.userData;if(foldable)toggleLayer(layerId);else toast("This layer cannot fold",1500);}
+}
+function onResize(){if(!G.renderer||!G.camera)return;G.renderer.setSize(innerWidth,innerHeight);G.camera.aspect=innerWidth/innerHeight;G.camera.updateProjectionMatrix();}
+
+// ── FX ────────────────────────────────────────────────────────────────────────
+// ── Ambient Atmosphere ───────────────────────────────────────────────────────
+// A baseline layer of motion every level gets regardless of season or active
+// mechanics — floating dust motes and a soft ground mist — so no scene ever
+// reads as fully static, even before the player touches anything.
+function initAtmosphere(){
+  G.atmos=[];
+  const n=90;
+  const geo=new THREE.BufferGeometry();
+  const posArr=new Float32Array(n*3);
+  const seeds=[];
+  for(let i=0;i<n;i++){
+    const x=(Math.random()-.5)*14, y=Math.random()*4-1, z=(Math.random()-.5)*10;
+    posArr[i*3]=x; posArr[i*3+1]=y; posArr[i*3+2]=z;
+    seeds.push({bx:x,by:y,bz:z,spd:.2+Math.random()*.3,t0:Math.random()*Math.PI*2});
+  }
+  geo.setAttribute("position",new THREE.BufferAttribute(posArr,3));
+  const mat=new THREE.PointsMaterial({color:0xffe8c0,size:.035,transparent:true,opacity:.32,depthWrite:false});
+  const pts=new THREE.Points(geo,mat);
+  pts.userData={dust:true,seeds};
+  G.scene.add(pts); G.atmos.push(pts);
+
+  const mc=document.createElement("canvas"); mc.width=256;mc.height=256;
+  const mx=mc.getContext("2d");
+  const grad=mx.createRadialGradient(128,128,10,128,128,128);
+  grad.addColorStop(0,"rgba(255,255,255,.35)"); grad.addColorStop(1,"rgba(255,255,255,0)");
+  mx.fillStyle=grad; mx.fillRect(0,0,256,256);
+  const mistTex=new THREE.CanvasTexture(mc);
+  mistTex.wrapS=mistTex.wrapT=THREE.RepeatWrapping;
+  const mist=new THREE.Mesh(new THREE.PlaneGeometry(20,12),new THREE.MeshBasicMaterial({map:mistTex,transparent:true,opacity:.16,depthWrite:false}));
+  mist.rotation.x=-Math.PI/2; mist.position.y=-2.6;
+  mist.userData={mist:true};
+  G.scene.add(mist); G.atmos.push(mist);
+}
+
+function updateAtmosphere(t){
+  G.atmos.forEach(a=>{
+    const u=a.userData;
+    if(u.dust){
+      const arr=a.geometry.attributes.position.array;
+      u.seeds.forEach((s,i)=>{
+        arr[i*3]  = s.bx+Math.sin(t*s.spd+s.t0)*.6;
+        arr[i*3+1]= s.by+Math.sin(t*s.spd*.7+s.t0*1.3)*.35;
+        arr[i*3+2]= s.bz+Math.cos(t*s.spd*.6+s.t0)*.5;
+      });
+      a.geometry.attributes.position.needsUpdate=true;
+      a.material.opacity=.26+Math.sin(t*.4)*.08;
+    }
+    if(u.mist){
+      a.material.map.offset.x=(t*.01)%1;
+      a.rotation.z+=0.00025;
+    }
+  });
+}
+
+function sparkAt(pos){
+  if(!pos)return;
+  const cols=[0xffd700,0xff88cc,0x88ffcc,0x88ccff,0xffcc66];
+  for(let i=0;i<10;i++){
+    const s=new THREE.Mesh(new THREE.SphereGeometry(.045,4,4),new THREE.MeshBasicMaterial({color:cols[i%cols.length]}));
+    s.position.copy(pos);
+    const v=new THREE.Vector3((Math.random()-.5)*3.5,1.5+Math.random()*2,(Math.random()-.5)*3.5);
+    G.scene.add(s); let li=0;
+    const step=()=>{li++;s.position.addScaledVector(v,.03);v.y-=.065;s.material.opacity=1-li/28;s.material.transparent=true;if(li<28)requestAnimationFrame(step);else G.scene.remove(s);}; step();
+  }
+}
+
+function rainFx(){const p=document.getElementById("pfx");for(let i=0;i<25;i++)setTimeout(()=>{const d=document.createElement("div");const x=Math.random()*100,y=Math.random()*50;d.className="pfx-p";d.style.cssText=`width:2px;height:14px;background:rgba(100,160,255,.65);left:${x}%;top:${y}%;border-radius:1px;--dur:.9s;--tx:${(Math.random()-.5)*20}px;--ty:${80+Math.random()*60}px`;p.appendChild(d);setTimeout(()=>d.remove(),950);},i*55);}
+function moonFx(){const p=document.getElementById("pfx");for(let i=0;i<15;i++){const d=document.createElement("div");d.className="pfx-p";d.style.cssText=`width:${4+Math.random()*6}px;height:${4+Math.random()*6}px;background:rgba(255,240,150,.85);left:${25+Math.random()*50}%;top:${15+Math.random()*50}%;border-radius:50%;--dur:1.6s;--tx:${(Math.random()-.5)*80}px;--ty:${(Math.random()-.5)*80}px`;p.appendChild(d);setTimeout(()=>d.remove(),1700);}}
+function fireFx(){const p=document.getElementById("pfx");for(let i=0;i<18;i++)setTimeout(()=>{const d=document.createElement("div");d.className="pfx-p";d.style.cssText=`width:${5+Math.random()*8}px;height:${5+Math.random()*8}px;background:rgba(255,${80+Math.floor(Math.random()*80)},20,.9);left:${20+Math.random()*60}%;top:${30+Math.random()*40}%;border-radius:50%;--dur:1.1s;--tx:${(Math.random()-.5)*60}px;--ty:-${40+Math.random()*80}px`;p.appendChild(d);setTimeout(()=>d.remove(),1200);},i*45);}
+
+function confetti(){
+  const p=document.getElementById("pfx");
+  const cols=["#ffd700","#ff88cc","#88ffcc","#88ccff","#ffcc44","#cc88ff"];
+  for(let i=0;i<60;i++)setTimeout(()=>{
+    const d=document.createElement("div");d.className="pfx-p";const c=cols[i%cols.length];
+    d.style.cssText=`width:${6+Math.random()*10}px;height:${6+Math.random()*10}px;background:${c};left:${10+Math.random()*80}%;top:${10+Math.random()*60}%;border-radius:${Math.random()>0.5?'50%':'2px'};--dur:${1.4+Math.random()*.8}s;--tx:${(Math.random()-.5)*300}px;--ty:${(Math.random()-.5)*200}px`;
+    p.appendChild(d);setTimeout(()=>d.remove(),2300);
+  },i*30);
+}
+
+// ── Game Loop ──────────────────────────────────────────────────────────────────
+function loop(){
+  G.animId=requestAnimationFrame(loop); G.t+=0.016;
+  const t=G.t;
+
+  // Fold spring-damper
+  G.lv?.layers.forEach(l=>{
+    const st=G.lStates[l.id],m=G.lMeshes[l.id]; if(!st||!m)return;
+    const k=18,d=5.5,disp=st.targetAngle-st.angle;
+    st.vel+=(disp*k-st.vel*d)*.016; st.angle+=st.vel*.016;
+    m.rotation.x=st.angle*(Math.PI/2.1);
+    m.position.y=l.y-st.angle*.35;
+
+    // Dynamic Visual Echo — pulse the contour edges of hint-targeted layers
+    const edges=m.children.find(ch=>ch instanceof THREE.LineSegments);
+    if(edges){
+      if(edges.userData.pulsing && t<edges.userData.pulseUntil){
+        const pulse=.5+Math.sin(t*6)*.45;
+        edges.material.opacity=edges.userData.baseOpacity+pulse*.5;
+        edges.material.color.setHex(0xf3dc8a);
+      }else{
+        edges.userData.pulsing=false;
+        edges.material.opacity=edges.userData.baseOpacity;
+      }
+    }
+  });
+
+  // Smooth ambient transitions during season changes
+  if(G.skyCurrent && G.skyTarget){
+    G.skyCurrent.lerp(G.skyTarget,.04);
+    if(G.scene.background) G.scene.background=G.skyCurrent;
+  }
+  if(G.fogCurrent && G.fogTarget && G.scene.fog){
+    G.fogCurrent.lerp(G.fogTarget,.04);
+    G.scene.fog.color.copy(G.fogCurrent);
+  }
+  G.scene?.children.forEach(c=>{
+    if(c instanceof THREE.DirectionalLight && c.userData.sun){
+      if(c.userData.targetIntensity!=null) c.intensity+=(c.userData.targetIntensity-c.intensity)*.05;
+      if(c.userData.targetColor!=null){
+        if(!c.userData._tc){c.userData._tc=new THREE.Color(c.userData.targetColor);}
+        c.userData._tc.setHex(c.userData.targetColor);
+        c.color.lerp(c.userData._tc,.05);
+      }
+    }
+  });
+
+  // Deco animations
+  G.deco.forEach(d=>{
+    const u=d.userData;
+    if(u.cloud){d.position.y=u.baseY+Math.sin(t*u.spd+u.t0)*.1;d.position.x+=Math.sin(t*.035)*.0012;}
+    if(u.crystal){
+      d.rotation.y=t*.5+u.t0;
+      d.material.opacity=.6+Math.sin(t*1.8+u.t0)*.25;
+      // Iridescent hue shimmer
+      if(u.baseHue!=null && d.material.color){
+        const hue=(u.baseHue+Math.sin(t*.7+u.t0)*.04+1)%1;
+        const c=new THREE.Color(); c.setHSL(hue,.55,.55);
+        d.material.color.lerp(c,.02);
+      }
+    }
+    if(u.flower){d.scale.setScalar(.9+Math.sin(t*1.4+u.t0)*.1);}
+    if(u.firefly&&d.visible){d.position.x=u.bx+Math.sin(t*.85+u.t0)*1.4;d.position.y=.35+Math.sin(t*1.15+u.t0)*.7;d.position.z=u.bz+Math.cos(t*.75+u.t0+1)*1.3;d.material.opacity=.4+Math.sin(t*3.5+u.t0)*.6;d.material.transparent=true;}
+    if(u.star&&d.visible){d.material.opacity=.45+Math.sin(t*2.2+u.t0)*.55;d.material.transparent=true;}
+    // Trees were tagged {tree:true} but had no matching branch here, so
+    // every tree in the forest sat perfectly rigid — a real "static world"
+    // bug. Gentle trunk-hinge sway (like wind moving the canopy) fixes it.
+    if(u.tree){d.rotation.z=Math.sin(t*u.sway+u.t0)*.035;d.rotation.x=Math.sin(t*u.sway*.7+u.t0+1)*.02;}
+    // Grass blades — per-blade phase offset so the patch reads as a
+    // traveling wave rather than everything rocking in lockstep.
+    if(u.grass){d.rotation.z=Math.sin(t*u.sway+u.t0)*.22;}
+    // Rocks had no animation hook at all previously (fully static).
+    if(u.rock){d.position.y=u.baseY+Math.sin(t*.4+u.t0)*.012;d.rotation.y+=.0015;}
+  });
+
+  // Home markers
+  G.hMarkers.forEach((m,i)=>{
+    m.rotation.y=t*1.8+i*.7;
+    const p=1+Math.sin(t*3.5+i)*.09; m.scale.setScalar(p);
+    if(G.cHome[i]){m.children[0].material.color.setHex(0x5ade30);m.children[1].material.color.setHex(0x5ade30);}
+  });
+
+  // Creature wings
+  G.cMeshes.forEach((cm,i)=>{
+    cm.traverse(child=>{if(child.userData?.wing){child.rotation.z=child.userData.side*(0.35+Math.sin(t*9+child.userData.t0)*.4);}});
+    if(!G.cHome[i]){cm.position.y+=Math.sin(t*2+i*.7)*.001;}
+  });
+
+  // Update cooldown badges live (cheap DOM check, ~once per second is enough
+  // but per-frame keeps the countdown text crisp without extra timers)
+  if(G.lv && Math.floor(t*4)%4===0) updateCtrlState();
+
+  // ── Cinematic Camera Director ──────────────────────────────────────────────
+  // Base resting pose (matches the original static framing exactly, so nothing
+  // about the puzzle's readability changes — only how we arrive at and depart
+  // from it).
+  const restPos={x:0,y:5.5,z:11}, restLook={x:0,y:-.8,z:0};
+
+  // 1) Intro dolly: on level start the camera begins pulled back/high and
+  // eases in with a slight overshoot-and-settle (classic ease-out-back),
+  // instead of snapping straight to the resting pose.
+  const introDur=1.6, introT=Math.min((t-G.camIntroT0)/introDur,1);
+  const eob=introT<1 ? easeOutBack(introT) : 1;
+  const introPos={
+    x:restPos.x, y:restPos.y+(1-eob)*3.2, z:restPos.z+(1-eob)*5.5,
+  };
+
+  // 2) Idle organic drift — two mismatched sine periods so it never feels
+  // like a metronome, small enough to stay clearly "idle" not "distracting."
+  const driftX=Math.sin(t*.035)*.25 + Math.sin(t*.091)*.07;
+  const driftY=Math.sin(t*.048+1.7)*.06;
+
+  // 3) Focus-pulse — anticipation (fast ease toward target), a brief hold,
+  // then follow-through (slower ease back to rest). Triggered by cameraFocus().
+  let focusW=0;
+  if(G.camFocusPos && t<G.camFocusUntil){
+    const remain=G.camFocusUntil-t, total=G.camFocusDur||1.2;
+    const elapsed=total-remain;
+    focusW = elapsed<total*.35
+      ? easeOutCubic(elapsed/(total*.35))          // anticipation-in
+      : Math.max(0,1-easeInCubic((elapsed-total*.35)/(total*.65))); // follow-through-out
+  }
+
+  // 4) Shake channel — tiny, for moments like fire ignition; decays fast.
+  let shakeX=0,shakeY=0;
+  if(t<G.camShakeUntil){
+    const s=(G.camShakeUntil-t)*8;
+    shakeX=(Math.random()-.5)*.05*s; shakeY=(Math.random()-.5)*.03*s;
+  }
+
+  const camX=introPos.x+driftX+shakeX;
+  const camY=introPos.y+driftY+shakeY;
+  const camZ=introPos.z - focusW*1.1; // dolly slightly toward the action
+
+  G.camera.position.x+=(camX-G.camera.position.x)*.12;
+  G.camera.position.y+=(camY-G.camera.position.y)*.12;
+  G.camera.position.z+=(camZ-G.camera.position.z)*.12;
+
+  const lookX = restLook.x + (G.camFocusPos ? (G.camFocusPos.x-restLook.x)*focusW*.4 : 0);
+  const lookY = restLook.y + (G.camFocusPos ? (G.camFocusPos.y-restLook.y)*focusW*.4 : 0);
+  const lookZ = restLook.z + (G.camFocusPos ? (G.camFocusPos.z-restLook.z)*focusW*.4 : 0);
+  G.camera.lookAt(lookX,lookY,lookZ);
+
+  updateAtmosphere(t);
+
+  G.renderer.render(G.scene,G.camera);
+}
+
+function easeOutBack(x){const c1=1.70158,c3=c1+1; return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);}
+function easeOutCubic(x){return 1-Math.pow(1-x,3);}
+function easeInCubic(x){return x*x*x;}
+
+// Call after any interaction that deserves a brief camera acknowledgement —
+// folding a layer, activating a mechanic, etc. Safe to call rapidly; each
+// call simply refreshes the target and window.
+function cameraFocus(pos,dur=1.2){
+  if(!pos)return;
+  G.camFocusPos=pos.clone?pos.clone():new THREE.Vector3(pos.x,pos.y,pos.z);
+  G.camFocusDur=dur;
+  G.camFocusUntil=G.t+dur;
+}
+
+
+// ── Boot ───────────────────────────────────────────────────────────────────────
+buildTabs();
+
+// Global ripple micro-interaction — delegated so any current or future
+// .t-btn/.wbtn/.hbtn/.lcard/.ls-tab gets it for free.
+document.addEventListener("pointerdown",e=>{
+  const el=e.target.closest(".t-btn,.wbtn,.hbtn,.lcard,.ls-tab");
+  if(!el)return;
+  const r=el.getBoundingClientRect();
+  const rip=document.createElement("span");
+  rip.className="ripple";
+  const size=Math.max(r.width,r.height)*1.4;
+  rip.style.width=rip.style.height=size+"px";
+  rip.style.left=(e.clientX-r.left-size/2)+"px";
+  rip.style.top=(e.clientY-r.top-size/2)+"px";
+  el.appendChild(rip);
+  setTimeout(()=>rip.remove(),650);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  BOOK OF WORLDS — DOM-based World Select + Level Map  (Phase 2)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// Called once, when the opening cinematic (Phase 1, separate script below)
+// finishes its portal fly-through.
+window.bookIntroFinished = function(){
+  goWorldSelect();
+};
+
+function goWorldSelect(celebrateMsg){
+  buildWorldSelectDOM();
+  show("sWorldSelect");
+  const banner = document.getElementById("wsCelebrate");
+  if(celebrateMsg){
+    banner.textContent = celebrateMsg;
+    banner.classList.add("show");
+    setTimeout(()=>banner.classList.remove("show"), 3200);
+  } else {
+    banner.classList.remove("show");
+  }
+}
+
+function buildWorldSelectDOM(){
+  const grid = document.getElementById("wsGrid");
+  grid.innerHTML = "";
+  WORLDS.forEach(w=>{
+    const unlocked = isWorldUnlocked(w);
+    const locked = !unlocked || !w.developed;
+    const card = document.createElement("div");
+    card.className = "ws-card" + (locked ? " locked" : "");
+    card.innerHTML = `
+      <div class="ws-card-glow" style="background:${w.color}"></div>
+      ${locked ? '<div class="ws-card-chain"></div>' : ''}
+      <div class="ws-card-icon" style="color:${w.color}">${locked ? "🔒" : "📖"}</div>
+      <div class="ws-card-name" style="color:${locked?'var(--muted)':w.color}">${w.name}</div>
+      <div class="ws-card-sub">${w.sub}</div>
+      ${locked
+        ? `<div class="ws-card-lock">${!w.developed ? "Coming Soon" : "Complete the previous chapter"}</div>`
+        : `<div class="ws-card-lock" style="opacity:.5">${worldLevels(w).filter(lv=>G.completed[lv.id]).length} / ${worldLevels(w).length} chapters</div>`
+      }`;
+    if(!locked) card.addEventListener("click", ()=>enterWorldMap(w.key));
+    grid.appendChild(card);
+  });
+}
+
+function enterWorldMap(key){
+  const w = WORLDS.find(x=>x.key===key);
+  if(!w || !isWorldUnlocked(w)) return;
+  G.activeWorld = w;
+  buildWorldMap(w);
+  show("sWorldMap");
+}
+
+function buildWorldMap(w){
+  document.getElementById("wmTitle").textContent = w.name;
+  document.getElementById("wmSub").textContent = w.sub + (w.developed ? "" : " · Coming Soon");
+  const svg = document.getElementById("wmPathSvg");
+  const nodesEl = document.getElementById("wmNodes");
+  const scrollEl = document.getElementById("wmScroll");
+  svg.innerHTML = "";
+  nodesEl.innerHTML = "";
+
+  if(!w.developed){
+    scrollEl.style.height = "70vh";
+    nodesEl.innerHTML = `<div class="wm-comingsoon">✦ This chapter is still being written ✦<br><span>${w.name} awakens in a future update.</span></div>`;
+    return;
+  }
+
+  const levels = worldLevels(w);
+  const n = levels.length;
+  const spacingY = 130, amp = 30, topPad = 90;
+  const totalH = topPad + n*spacingY + 60;
+  scrollEl.style.height = totalH + "px";
+  svg.setAttribute("viewBox", `0 0 100 ${totalH}`);
+  svg.setAttribute("preserveAspectRatio", "none");
+
+  const pts = levels.map((lv,i)=>({
+    x: 50 + Math.sin(i*0.85)*amp,
+    y: topPad + i*spacingY,
+    lv
+  }));
+
+  for(let i=1;i<pts.length;i++){
+    const p0=pts[i-1], p1=pts[i];
+    const midY=(p0.y+p1.y)/2;
+    const d = `M ${p0.x} ${p0.y} C ${p0.x} ${midY}, ${p1.x} ${midY}, ${p1.x} ${p1.y}`;
+    const seg = document.createElementNS("http://www.w3.org/2000/svg","path");
+    seg.setAttribute("d", d);
+    const lit = !!G.completed[p0.lv.id];
+    seg.setAttribute("class", "wm-path-seg " + (lit ? "lit" : "unlit"));
+    svg.appendChild(seg);
+  }
+
+  pts.forEach((p,i)=>{
+    const lv = p.lv;
+    const completed = !!G.completed[lv.id];
+    const unlocked = isLevelUnlocked(lv.id);
+    const node = document.createElement("div");
+    node.className = "wm-node " + (completed ? "completed" : unlocked ? "unlocked" : "locked");
+    node.style.left = p.x + "%";
+    node.style.top = p.y + "px";
+    node.innerHTML = `${completed ? '<span class="wm-node-star">⭐</span>' : ''}
+      <span class="wm-node-n">${unlocked ? String(i+1).padStart(2,"0") : "🔒"}</span>`;
+    node.title = unlocked ? lv.name : "Complete the previous chapter to unlock";
+    if(unlocked) node.addEventListener("click", ()=>enterLevel(lv.id, node));
+    nodesEl.appendChild(node);
+  });
+}
+
+// World-complete: celebrate, persist, unlock the next world, return to the Book.
+function worldCompleteSequence(w){
+  const nextW = WORLDS[WORLDS.indexOf(w)+1];
+  const msg = nextW
+    ? `✦ ${w.name} Complete — ${nextW.name} Awakens ✦`
+    : `✦ ${w.name} Complete ✦`;
+  goWorldSelect(msg);
+}
+</script>
+
+<script>
+
+/* ══════════════════════════════════════════════════════════════
+   THE BOOK OF WORLDS — Opening Cinematic
+   Stages: ORBIT (idle) -> OPENING -> BURST -> PORTAL -> handoff
+   On completion, hands off to the DOM-based World Select screen
+   rather than building a second set of 3D islands — keeps only
+   one WebGL context alive during gameplay (mobile GPU/battery).
+
+   REPLAYABLE: this used to be a self-invoking IIFE that ran once
+   at page load and could never be triggered again — clicking
+   "Enter the Orb" from the title screen skipped straight past it.
+   It's now window.playBookIntro(), a function that fully tears
+   down after itself (renderer disposed, listeners removed) so it
+   can be called again any time the player returns to the title
+   screen or explicitly asks to replay it.
+   ══════════════════════════════════════════════════════════════ */
+
+let _introActive = false;
+
+window.playBookIntro = function playBookIntro(){
+  if(_introActive) return; // guard against double-invocation
+  _introActive = true;
+
+  const cv = document.getElementById('bkCv');
+  const hint = document.getElementById('bkHint');
+  const fadeEl = document.getElementById('bkFade');
+  const skipBtn = document.getElementById('bkSkipBtn');
+  const muteBtn = document.getElementById('bkMuteBtn');
+
+  // Reset UI state in case this is a replay.
+  show('sBookIntro');
+  hint.classList.remove('show');
+  fadeEl.classList.remove('on');
+  skipBtn.style.pointerEvents = '';
+  skipBtn.style.opacity = '';
+
+  const renderer = new THREE.WebGLRenderer({canvas:cv, antialias:true, alpha:false});
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.15;
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x05040a, 0.05);
+
+  const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, 0.05, 200);
+  camera.position.set(0, 1.7, 5.2);
+
+  function onResize(){
+    camera.aspect = innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  }
+  addEventListener('resize', onResize);
+
+  /* ---------- soft glow sprite texture (canvas-generated, no external assets) ---------- */
+  function glowTexture(inner, outer){
+    const c = document.createElement('canvas'); c.width=c.height=128;
+    const ctx = c.getContext('2d');
+    const g = ctx.createRadialGradient(64,64,0,64,64,64);
+    g.addColorStop(0, inner); g.addColorStop(0.4, inner.replace('1)','.55)'));
+    g.addColorStop(1, outer);
+    ctx.fillStyle=g; ctx.fillRect(0,0,128,128);
+    return new THREE.CanvasTexture(c);
+  }
+  const goldGlowTex = glowTexture('rgba(255,235,190,1)','rgba(255,170,70,0)');
+  const blueGlowTex = glowTexture('rgba(190,220,255,1)','rgba(90,140,255,0)');
+
+  /* ---------- lighting (HDR-ish: bright point source + tone mapping does the rest) ---------- */
+  const ambient = new THREE.AmbientLight(0x201a2c, 0.55);
+  scene.add(ambient);
+  const bookLight = new THREE.PointLight(0xffc878, 3.2, 12, 2);
+  bookLight.position.set(0, 1.0, 0);
+  bookLight.castShadow = true;
+  scene.add(bookLight);
+  const rimLight = new THREE.DirectionalLight(0x6a7dff, 0.45);
+  rimLight.position.set(-4,5,-3);
+  scene.add(rimLight);
+  const underGlow = new THREE.PointLight(0x88aaff, 1.4, 6, 2);
+  underGlow.position.set(0, 0.1, 0);
+  scene.add(underGlow);
+
+  /* ---------- library floor / pedestal ---------- */
+  const floor = new THREE.Mesh(
+    new THREE.CylinderGeometry(9, 9, 0.4, 48),
+    new THREE.MeshStandardMaterial({color:0x0c0a10, roughness:0.85, metalness:0.1})
+  );
+  floor.position.y = -1.3; floor.receiveShadow = true;
+  scene.add(floor);
+
+  const pedestal = new THREE.Group();
+  const pedBase = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.55, 0.75, 0.9, 8),
+    new THREE.MeshStandardMaterial({color:0x1a1420, roughness:0.6, metalness:0.4})
+  );
+  pedBase.position.y = -0.65; pedBase.castShadow = pedBase.receiveShadow = true;
+  pedestal.add(pedBase);
+  const pedTop = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.62, 0.62, 0.08, 8),
+    new THREE.MeshStandardMaterial({color:0x2a2030, roughness:0.4, metalness:0.6, emissive:0x3a2810, emissiveIntensity:0.3})
+  );
+  pedTop.position.y = -0.16; pedTop.castShadow = true;
+  pedestal.add(pedTop);
+  scene.add(pedestal);
+
+  // volumetric-style light column under the book (faked with additive cone —
+  // true volumetric god-rays need a post-process raymarch pass, which isn't
+  // viable without an EffectComposer pipeline; this reads convincingly close
+  // at this scale and costs almost nothing).
+  const rayGeo = new THREE.CylinderGeometry(0.02, 1.1, 3.6, 24, 1, true);
+  const rayMat = new THREE.MeshBasicMaterial({color:0xffcf8a, transparent:true, opacity:0.08, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, depthWrite:false});
+  const rayCol = new THREE.Mesh(rayGeo, rayMat);
+  rayCol.position.y = 1.3;
+  scene.add(rayCol);
+  // secondary crossed ray for a fuller "shafts of light" look
+  const rayCol2 = rayCol.clone();
+  rayCol2.rotation.y = Math.PI/5;
+  rayCol2.scale.set(0.7,1,0.7);
+  scene.add(rayCol2);
+
+  /* ---------- background candles ---------- */
+  const candles = [];
+  for(let i=0;i<10;i++){
+    const a = (i/10)*Math.PI*2;
+    const r = 6.5 + Math.random()*1.5;
+    const cGroup = new THREE.Group();
+    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.05,0.7,6), new THREE.MeshStandardMaterial({color:0x3a2818, roughness:0.8}));
+    stick.position.y = 0.35;
+    cGroup.add(stick);
+    const flameSprite = new THREE.Sprite(new THREE.SpriteMaterial({map:goldGlowTex, color:0xffaa44, blending:THREE.AdditiveBlending, depthWrite:false, transparent:true}));
+    flameSprite.scale.set(0.35,0.55,1);
+    flameSprite.position.y = 0.78;
+    flameSprite.userData.flicker = Math.random()*10;
+    cGroup.add(flameSprite);
+    const cLight = new THREE.PointLight(0xff9944, 0.35, 3);
+    cLight.position.y = 0.78;
+    cGroup.add(cLight);
+    cGroup.position.set(Math.cos(a)*r, -1.3, Math.sin(a)*r);
+    scene.add(cGroup);
+    candles.push({g:cGroup, flame:flameSprite, light:cLight});
+  }
+
+  /* ---------- ambient mist / dust particles ---------- */
+  function makeMist(count, radius, colorTex, sizeMin, sizeMax, ySpread){
+    const group = new THREE.Group();
+    const data = [];
+    for(let i=0;i<count;i++){
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({map:colorTex, transparent:true, opacity:0.0, blending:THREE.AdditiveBlending, depthWrite:false}));
+      const a = Math.random()*Math.PI*2, r = Math.random()*radius;
+      s.position.set(Math.cos(a)*r, (Math.random()-0.2)*ySpread, Math.sin(a)*r);
+      const sc = sizeMin + Math.random()*(sizeMax-sizeMin);
+      s.scale.set(sc,sc,1);
+      group.add(s);
+      data.push({sprite:s, speed:0.05+Math.random()*0.12, phase:Math.random()*Math.PI*2, baseOpacity:0.08+Math.random()*0.22, baseY:s.position.y, drift:(Math.random()-0.5)*0.15});
+    }
+    scene.add(group);
+    return {group, data};
+  }
+  const dustMotes = makeMist(160, 4.5, goldGlowTex, 0.03, 0.09, 3);
+  const bgMist   = makeMist(45, 8.5, blueGlowTex, 0.6, 1.4, 1.5);
+
+  /* ---------- floating runes orbiting the book ---------- */
+  const runeTex = glowTexture('rgba(255,235,190,1)','rgba(255,170,70,0)');
+  const floatingRunes = [];
+  const runeSymbols = 5;
+  for(let i=0;i<runeSymbols;i++){
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.045, 0.06, 5),
+      new THREE.MeshBasicMaterial({color:0xbcd8ff, transparent:true, opacity:0.75, blending:THREE.AdditiveBlending, side:THREE.DoubleSide, depthWrite:false})
+    );
+    scene.add(ring);
+    floatingRunes.push({mesh:ring, radius:0.9+Math.random()*0.5, height:0.2+Math.random()*0.6, speed:0.15+Math.random()*0.15, phase:(i/runeSymbols)*Math.PI*2});
+  }
+
+  /* ---------- THE BOOK ---------- */
+  const book = new THREE.Group();
+  book.position.y = 0.1;
+
+  const spineMat = new THREE.MeshStandardMaterial({color:0x4a2f18, roughness:0.5, metalness:0.3, emissive:0x1a0e04, emissiveIntensity:0.2});
+  const coverMat = new THREE.MeshStandardMaterial({color:0x5a3a1e, roughness:0.45, metalness:0.35, emissive:0x2a1608, emissiveIntensity:0.25});
+  const pageMat  = new THREE.MeshStandardMaterial({color:0xf0e0bc, roughness:0.9, metalness:0.0, emissive:0x3a2c14, emissiveIntensity:0.15});
+  const innerPageMat = new THREE.MeshStandardMaterial({color:0xf5e8c8, roughness:0.85, metalness:0.0, emissive:0x4a3a1a, emissiveIntensity:0.2, side:THREE.DoubleSide});
+  const runeMat  = new THREE.MeshBasicMaterial({color:0xffd98a, transparent:true, opacity:0.9, blending:THREE.AdditiveBlending, depthWrite:false});
+
+  const spine = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 0.9), spineMat);
+  book.add(spine);
+
+  const pageStack = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.11, 0.84), pageMat);
+  book.add(pageStack);
+
+  const coverGeo = new THREE.BoxGeometry(0.4, 0.03, 0.9);
+  const leftHinge = new THREE.Group(); leftHinge.position.set(-0.02,0.055,0);
+  const leftCover = new THREE.Mesh(coverGeo, coverMat);
+  leftCover.position.x = -0.2;
+  leftCover.castShadow = true;
+  leftHinge.add(leftCover);
+  book.add(leftHinge);
+
+  const rightHinge = new THREE.Group(); rightHinge.position.set(0.02,0.055,0);
+  const rightCover = new THREE.Mesh(coverGeo, coverMat);
+  rightCover.position.x = 0.2;
+  rightCover.castShadow = true;
+  rightHinge.add(rightCover);
+  book.add(rightHinge);
+
+  // ── inner pages: 3 thin leaves per side, staggered, for a real page-turn
+  // (rather than just the two cover "doors" opening) ──
+  const innerPagesLeft = [], innerPagesRight = [];
+  const pageGeo = new THREE.PlaneGeometry(0.38, 0.86);
+  for(let i=0;i<3;i++){
+    const hL = new THREE.Group(); hL.position.set(-0.015, 0.058+i*0.004, 0);
+    const pL = new THREE.Mesh(pageGeo, innerPageMat);
+    pL.position.x = -0.19; pL.rotation.y = Math.PI;
+    hL.add(pL); book.add(hL);
+    innerPagesLeft.push(hL);
+
+    const hR = new THREE.Group(); hR.position.set(0.015, 0.058+i*0.004, 0);
+    const pR = new THREE.Mesh(pageGeo, innerPageMat);
+    pR.position.x = 0.19;
+    hR.add(pR); book.add(hR);
+    innerPagesRight.push(hR);
+  }
+
+  const runeGeo = new THREE.RingGeometry(0.08,0.1,32);
+  const rune = new THREE.Mesh(runeGeo, runeMat);
+  rune.rotation.x = -Math.PI/2;
+  rune.position.set(0.2, 0.09, 0);
+  rightCover.add(rune);
+  const runeCore = new THREE.Sprite(new THREE.SpriteMaterial({map:goldGlowTex, blending:THREE.AdditiveBlending, transparent:true, depthWrite:false}));
+  runeCore.scale.set(0.3,0.3,1);
+  runeCore.position.set(0,0.02,0);
+  rightCover.add(runeCore);
+
+  book.traverse(o=>{ if(o.isMesh) o.castShadow = true; });
+  scene.add(book);
+
+  const bookHalo = new THREE.Sprite(new THREE.SpriteMaterial({map:goldGlowTex, blending:THREE.AdditiveBlending, transparent:true, depthWrite:false, opacity:0.5}));
+  bookHalo.scale.set(2.4,2.4,1);
+  bookHalo.position.copy(book.position);
+  scene.add(bookHalo);
+
+  /* ---------- optional ambient audio (synthesized placeholder) ----------
+     No licensed orchestral track is available in this environment, so
+     this is a small Web Audio pad + chime — good enough to sell "the room
+     is alive" without silence. Swap for a real track by replacing this
+     block with an <audio> element pointed at your asset; everything else
+     (mute button, cleanup) can stay as-is. */
+  let audioCtx = null, audioNodes = null, muted = false;
+  function startAmbientAudio(){
+    if(audioCtx) return;
+    try{
+      audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      const master = audioCtx.createGain();
+      master.gain.value = 0.06;
+      master.connect(audioCtx.destination);
+      const osc1 = audioCtx.createOscillator(); osc1.type='sine'; osc1.frequency.value=110;
+      const osc2 = audioCtx.createOscillator(); osc2.type='sine'; osc2.frequency.value=165.5;
+      const lfo = audioCtx.createOscillator(); lfo.type='sine'; lfo.frequency.value=0.08;
+      const lfoGain = audioCtx.createGain(); lfoGain.gain.value=0.02;
+      lfo.connect(lfoGain); lfoGain.connect(master.gain);
+      osc1.connect(master); osc2.connect(master);
+      osc1.start(); osc2.start(); lfo.start();
+      audioNodes = {osc1, osc2, lfo, master};
+    }catch(e){ console.warn('[intro audio] unavailable:', e); }
+  }
+  function stopAmbientAudio(){
+    if(!audioCtx) return;
+    try{
+      audioNodes.osc1.stop(); audioNodes.osc2.stop(); audioNodes.lfo.stop();
+      audioCtx.close();
+    }catch(e){}
+    audioCtx = null; audioNodes = null;
+  }
+  if(muteBtn){
+    muteBtn.textContent = '🔊';
+    muteBtn.onclick = ()=>{
+      muted = !muted;
+      muteBtn.textContent = muted ? '🔇' : '🔊';
+      if(audioNodes) audioNodes.master.gain.value = muted ? 0 : 0.06;
+    };
+  }
+
+  /* ---------- state machine ---------- */
+  const STATE = {ORBIT:'orbit', OPENING:'opening', BURST:'burst', PORTAL:'portal', DONE:'done'};
+  let state = STATE.ORBIT;
+  let stateTime = 0;
+  const clock = new THREE.Clock();
+  let rafId = null;
+  let camShake = 0;
+
+  setTimeout(()=>{ if(state===STATE.ORBIT) hint.classList.add('show'); }, 1200);
+
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  function onPointerDown(e){
+    if(state !== STATE.ORBIT) return;
+    const x = (e.clientX ?? e.touches?.[0]?.clientX);
+    const y = (e.clientY ?? e.touches?.[0]?.clientY);
+    mouse.x = (x/innerWidth)*2-1;
+    mouse.y = -(y/innerHeight)*2+1;
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObject(book, true);
+    if(hits.length){ beginOpen(false); }
+  }
+  cv.addEventListener('pointerdown', onPointerDown);
+  function onSkipClick(){ if(state===STATE.ORBIT) beginOpen(true); }
+  skipBtn.addEventListener('click', onSkipClick);
+
+  function beginOpen(skip){
+    state = STATE.OPENING;
+    stateTime = 0;
+    hint.classList.remove('show');
+    skipBtn.style.pointerEvents = 'none';
+    skipBtn.style.opacity = '0';
+    startAmbientAudio();
+    spawnBurstParticles();
+    if(skip){ fastForward = true; }
+  }
+  let fastForward = false;
+
+  let burstParticles = null;
+  function spawnBurstParticles(){
+    const count = 600;
+    const geo = new THREE.BufferGeometry();
+    const positions = new Float32Array(count*3);
+    const velocities = [];
+    for(let i=0;i<count;i++){
+      positions[i*3]=0; positions[i*3+1]=0.1; positions[i*3+2]=0;
+      const theta = Math.random()*Math.PI*2;
+      const phi = Math.acos((Math.random()*2)-1);
+      const speed = 1.2 + Math.random()*2.8;
+      velocities.push(new THREE.Vector3(
+        Math.sin(phi)*Math.cos(theta)*speed,
+        Math.abs(Math.cos(phi))*speed*1.3 + 0.6,
+        Math.sin(phi)*Math.sin(theta)*speed
+      ));
+    }
+    geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+    const mat = new THREE.PointsMaterial({size:0.05, map:goldGlowTex, color:0xffdca0, transparent:true, opacity:1, blending:THREE.AdditiveBlending, depthWrite:false});
+    const pts = new THREE.Points(geo, mat);
+    scene.add(pts);
+    burstParticles = {pts, velocities, geo};
+  }
+
+  const portalGroup = new THREE.Group();
+  portalGroup.visible = false;
+  const portalRingGeo = new THREE.TorusGeometry(1, 0.05, 16, 64);
+  const portalRingMat = new THREE.MeshBasicMaterial({color:0xffd98a, transparent:true, opacity:0.9, blending:THREE.AdditiveBlending});
+  const portalRing = new THREE.Mesh(portalRingGeo, portalRingMat);
+  portalGroup.add(portalRing);
+  const portalRing2 = new THREE.Mesh(portalRingGeo.clone(), new THREE.MeshBasicMaterial({color:0x9ac6ff, transparent:true, opacity:0.5, blending:THREE.AdditiveBlending}));
+  portalRing2.scale.setScalar(0.82);
+  portalGroup.add(portalRing2);
+  const portalDiscMat = new THREE.MeshBasicMaterial({color:0xfff3d6, transparent:true, opacity:0.0, blending:THREE.AdditiveBlending, side:THREE.DoubleSide});
+  const portalDisc = new THREE.Mesh(new THREE.CircleGeometry(1,48), portalDiscMat);
+  portalGroup.add(portalDisc);
+  scene.add(portalGroup);
+
+  const ringPool = [];
+  for(let i=0;i<8;i++){
+    const r = new THREE.Mesh(portalRingGeo.clone(), new THREE.MeshBasicMaterial({color:0xffe6b0, transparent:true, opacity:0, blending:THREE.AdditiveBlending}));
+    r.visible=false;
+    scene.add(r);
+    ringPool.push({mesh:r, active:false, t:0});
+  }
+  function fireRing(delay){
+    setTimeout(()=>{
+      const r = ringPool.find(r=>!r.active) || ringPool[0];
+      r.active = true; r.t = 0; r.mesh.visible = true; r.mesh.scale.setScalar(0.1);
+      r.mesh.position.copy(portalGroup.position);
+      r.mesh.quaternion.copy(camera.quaternion);
+    }, delay);
+  }
+
+  let orbitAngle = 0;
+
+  function finishIntro(){
+    cancelAnimationFrame(rafId);
+    removeEventListener('resize', onResize);
+    cv.removeEventListener('pointerdown', onPointerDown);
+    skipBtn.removeEventListener('click', onSkipClick);
+    document.getElementById('sBookIntro').classList.add('off');
+    stopAmbientAudio();
+    renderer.dispose();
+    _introActive = false;
+    if(typeof window.bookIntroFinished === 'function') window.bookIntroFinished();
+  }
+
+  function animate(){
+    rafId = requestAnimationFrame(animate);
+    const dt = Math.min(clock.getDelta(), 0.05);
+    stateTime += dt;
+    const t = clock.elapsedTime;
+
+    candles.forEach(c=>{
+      const f = 0.85 + Math.sin(t*8 + c.flame.userData.flicker)*0.1 + Math.sin(t*23+c.flame.userData.flicker)*0.05;
+      c.flame.material.opacity = f;
+      c.light.intensity = 0.3*f;
+    });
+
+    [dustMotes, bgMist].forEach(m=>{
+      m.data.forEach(d=>{
+        d.sprite.position.y = d.baseY + Math.sin(t*d.speed + d.phase)*0.4;
+        d.sprite.position.x += d.drift*dt;
+        const targetOp = d.baseOpacity * (state===STATE.ORBIT ? 1 : 0.4);
+        d.sprite.material.opacity += (targetOp - d.sprite.material.opacity)*0.02;
+      });
+    });
+
+    floatingRunes.forEach((r,i)=>{
+      const a = t*r.speed + r.phase;
+      r.mesh.position.set(Math.cos(a)*r.radius, book.position.y + r.height + Math.sin(t*0.7+i)*0.05, Math.sin(a)*r.radius);
+      r.mesh.rotation.z += dt*0.6;
+      r.mesh.lookAt(camera.position);
+      r.mesh.material.opacity = state===STATE.ORBIT ? (0.55+Math.sin(t*2+i)*0.2) : 0.15;
+    });
+
+    const breathe = 1 + Math.sin(t*1.3)*0.015;
+    book.scale.setScalar(breathe);
+    bookHalo.material.opacity = 0.4 + Math.sin(t*1.3)*0.08;
+    bookHalo.scale.setScalar(2.4 + Math.sin(t*0.9)*0.15);
+    runeCore.material.opacity = 0.6 + Math.sin(t*2.2)*0.3;
+    rune.material.opacity = 0.7 + Math.sin(t*2.2)*0.25;
+    bookLight.intensity = 3.0 + Math.sin(t*1.3)*0.4;
+
+    if(state === STATE.ORBIT){
+      book.position.y = 0.1 + Math.sin(t*0.8)*0.05;
+      bookHalo.position.y = book.position.y;
+      orbitAngle += dt * 0.09;
+      const r = 4.6, h = 1.6 + Math.sin(t*0.15)*0.3;
+      camera.position.set(Math.cos(orbitAngle)*r, h, Math.sin(orbitAngle)*r);
+      camera.lookAt(0, 0.3, 0);
+    }
+
+    else if(state === STATE.OPENING){
+      const dur = fastForward ? 1.2 : 3.4;
+      const p = Math.min(stateTime/dur, 1);
+      const ease = 1-Math.pow(1-p,3);
+      const r = 4.6*(1-ease*0.75), h = 1.6*(1-ease*0.6)+0.3*ease;
+      camera.position.set(Math.cos(orbitAngle)*r, h, Math.sin(orbitAngle)*r);
+      camera.lookAt(0, 0.3, 0);
+      // covers open first...
+      const coverEase = Math.min(ease*1.6, 1);
+      leftHinge.rotation.y = -coverEase*2.3;
+      rightHinge.rotation.y = coverEase*2.3;
+      // ...then inner pages fan open in a staggered flip, selling a real page-turn
+      innerPagesLeft.forEach((h,i)=>{
+        const pe = Math.max(0, Math.min((ease*1.9 - i*0.18), 1));
+        h.rotation.y = -pe*2.0;
+      });
+      innerPagesRight.forEach((h,i)=>{
+        const pe = Math.max(0, Math.min((ease*1.9 - i*0.18), 1));
+        h.rotation.y = pe*2.0;
+      });
+      bookLight.intensity = 3 + ease*8;
+      underGlow.intensity = 1.4 + ease*5;
+      rayMat.opacity = 0.08 + ease*0.35;
+      rayCol2.material.opacity = rayMat.opacity*0.7;
+      if(p>=1){ state = STATE.BURST; stateTime = 0; camShake = 1; }
+    }
+
+    else if(state === STATE.BURST){
+      const dur = fastForward ? 0.5 : 1.2;
+      const p = Math.min(stateTime/dur,1);
+      if(burstParticles){
+        const pos = burstParticles.geo.attributes.position;
+        for(let i=0;i<burstParticles.velocities.length;i++){
+          const v = burstParticles.velocities[i];
+          pos.array[i*3]   += v.x*dt;
+          pos.array[i*3+1] += v.y*dt;
+          pos.array[i*3+2] += v.z*dt;
+          v.y -= dt*0.6;
+        }
+        pos.needsUpdate = true;
+        burstParticles.pts.material.opacity = 1-p;
+      }
+      // subtle cinematic camera shake on impact, decaying
+      camShake *= 0.9;
+      camera.position.x += (Math.random()-0.5)*camShake*0.04;
+      camera.position.y += (Math.random()-0.5)*camShake*0.04;
+      fadeEl.style.transition = 'opacity .35s ease';
+      fadeEl.classList.toggle('on', p>0.55);
+      if(p>=1){
+        scene.remove(burstParticles.pts);
+        burstParticles = null;
+        state = STATE.PORTAL; stateTime = 0;
+        portalGroup.visible = true;
+        portalGroup.position.set(0,0.3,0);
+        portalGroup.scale.setScalar(0.01);
+        fireRing(0); fireRing(160); fireRing(320); fireRing(480); fireRing(640);
+      }
+    }
+
+    else if(state === STATE.PORTAL){
+      const dur = fastForward ? 1.4 : 2.8;
+      const p = Math.min(stateTime/dur,1);
+      const ease = p<0.5 ? 4*p*p*p : 1-Math.pow(-2*p+2,3)/2;
+      portalGroup.scale.setScalar(0.01 + ease*3.4);
+      portalRing.rotation.z += dt*1.4;
+      portalRing2.rotation.z -= dt*1.0;
+      portalDisc.material.opacity = Math.sin(p*Math.PI)*0.35;
+      portalGroup.quaternion.copy(camera.quaternion);
+      camera.position.lerp(new THREE.Vector3(0,0.3,-0.3), ease*0.38);
+      camera.fov = 42 + ease*36;
+      camera.updateProjectionMatrix();
+      fadeEl.style.transition = 'opacity .5s ease';
+      fadeEl.classList.toggle('on', p>0.7);
+
+      if(p>=1){
+        state = STATE.DONE;
+        setTimeout(finishIntro, 180);
+      }
+    }
+
+    ringPool.forEach(r=>{
+      if(!r.active) return;
+      r.t += dt;
+      const p = Math.min(r.t/1.4,1);
+      r.mesh.scale.setScalar(0.1 + p*4.2);
+      r.mesh.material.opacity = (1-p)*0.7;
+      if(p>=1){ r.active=false; r.mesh.visible=false; }
+    });
+
+    renderer.render(scene, camera);
+  }
+  animate();
+};
+
+// Play once automatically on first load. Also available as
+// window.playBookIntro() for replays (see the "Replay Intro" link on
+// World Select, and goTitle() reachable from other screens' back buttons).
+window.playBookIntro();
+</script>
+</body>
+</html>
