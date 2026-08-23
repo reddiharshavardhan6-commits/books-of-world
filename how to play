@@ -1,0 +1,47 @@
+# 📖 Books of Worlds — Interactive Puzzle Game
+
+**Books of Worlds** is an interactive fantasy puzzle game 🎮 where players explore different worlds, solve environmental puzzles 🧩, and guide unique creatures through challenging levels.
+
+## ✨ Features
+
+* 🌍 Multiple worlds and chapters
+* 🧩 Interactive puzzle mechanics
+* 🐉 Creature-based challenges
+* 🌦️ Seasonal and environmental mechanics
+* 🎯 Objectives, hints, and move tracking
+* 🏆 Level completion statistics
+* 🎬 Animations and visual effects
+* 🔐 User registration and login
+* 🛡️ JWT authentication
+
+## 🛠️ Technologies Used
+
+HTML5 | CSS3 | JavaScript | Three.js | Node.js | Express.js | JWT | bcrypt
+
+## 🎯 Project Objective
+
+The project combines **game development, interactive UI design, puzzle-solving, backend APIs, authentication, and JavaScript development** into an interactive web application.
+
+🚀 A project focused on creativity, problem-solving, and full-stack web development.
+
+🎮 How to Play — Books of Worlds
+📖 Start the Game
+Open the game and enter the Book of Worlds.
+🌍 Choose a World
+Select an available world and choose a chapter/level.
+🧩 Understand the Objective
+Each level gives you objectives. Read the riddle, hint, and objective panel before making moves.
+🐾 Guide the Creatures
+Move each creature through the environment and guide it to its home/destination.
+🌦️ Use the Environment
+Change seasons or activate available mechanics such as Rain, Wind, Lily Pads, Moonbeam, Torch, Tide, Vines, and Portal Stones to create the correct path.
+📚 Fold & Reveal Paths
+Some levels contain different terrain layers. Fold/reveal the layers to discover paths needed by different creatures.
+🎯 Complete All Objectives
+Finish the required objectives and guide all creatures home.
+🏆 Earn Stars
+Complete the chapter efficiently. Your moves and time are recorded on the completion screen.
+🔄 Retry or Continue
+After completing a level, you can continue to the next level, retry the current level, or return to the chapter map.
+
+💡 Tip: Different creatures have different requirements. For example, the Rabbit needs underground tunnels, Fish need water, Birds need updrafts/open sky, and Bears can break stone doors
